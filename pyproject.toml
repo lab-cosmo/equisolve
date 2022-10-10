@@ -1,0 +1,22 @@
+[build-system]
+# These are the assumed default build requirements from pip:
+# https://pip.pypa.io/en/stable/reference/pip/#pep-517-and-518-support
+requires = [
+    "setuptools>=44",
+    "setuptools-git-versioning<2",
+    "wheel>=0.36"]
+build-backend = "setuptools.build_meta"
+
+# configuration for the isort module
+[tool.isort]
+profile = "black"
+line_length = 88
+indent = 4
+include_trailing_comma = true
+lines_after_imports = 2
+known_first_party = "equisolve"
+
+[tool.pytest.ini_options]
+addopts = "-p pytest_cov"
+python_files = ["test_*.py", "*_test.py", "tests.py"]
+testpaths = "tests"

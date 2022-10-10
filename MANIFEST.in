@@ -1,0 +1,17 @@
+graft docs
+graft src
+
+include *.rst
+include LICENSE
+
+exclude .codacy.yaml
+exclude .codeclimate.yml
+exclude .coveragerc
+exclude .gitignore
+exclude .readthedocs.yml
+exclude tox.ini
+
+prune .tox
+prune tests
+
+global-exclude *.py[cod] __pycache__/* *.so *.dylib
