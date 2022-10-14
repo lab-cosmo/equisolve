@@ -6,4 +6,6 @@
 # Released under the GNU Public Licence, v3 or any higher version
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-__all__ = []
+__all__ = ["powerspectrum"]
+
+from .powerspectrum import compute_power_spectrum

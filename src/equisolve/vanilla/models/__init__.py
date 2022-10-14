@@ -6,4 +6,8 @@
 # Released under the GNU Public Licence, v3 or any higher version
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-__all__ = []
+__all__ = ["FullKernelGap", "SparseKernelGap", "LinearModel"]
+
+from full_kernel import FullKernelGap
+from linear import LinearModel
+from sparse_kernel import SparseKernelGap

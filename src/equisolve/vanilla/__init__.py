@@ -5,11 +5,11 @@
 #
 # Released under the GNU Public Licence, v3 or any higher version
 # SPDX-License-Identifier: GPL-3.0-or-later
+"""Vanilla implementation of the equisolve functions.
 
-__all__ = ["vanilla", "torch"]
+This implementation only depends numpy and scipy as third party dependencies.
+"""
 
-from . import torch, vanilla
+__all__ = ["models", "transformers"]
 
-
-__version__ = "0.0.0-dev"
-__authors__ = "the equisolve development team"
+from . import models, transformers
