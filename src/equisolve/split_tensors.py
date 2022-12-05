@@ -116,11 +116,15 @@ def split_tensors(
     # Randomly shuffle the unique indices and group them accordingly
     grouped_idxs = _group_indices(unique_idxs, group_sizes, random_seed)
 
+    grouped_idxs = [
+        Labels(names=names, values=group.reshape(-1, 1)) for group in grouped_idxs
+    ]
+
     # Split each of the input TensorMaps
     split_tensors = []
     for i, tensor in enumerate(tensors):
         with warnings.catch_warnings(record=True) as w:
-            split_tensors.append(split(tensor, axis, names, grouped_idxs))
+            split_tensors.append(split(tensor, axis, grouped_idxs))
 
         if len(w) > 0:
             warnings.warn(
@@ -189,7 +193,7 @@ def get_unique_indices(
                     + "tensors and try again."
                 )
     # Convert indices to a 2D numpy array. Makes it easier to instantiate a
-    # Labels object. Sort values in ascending order.
+    # Labels object. Sort values in ascending order by axis=0.
     unique_idxs = np.sort(
         np.array([np.array([j for j in i]) for i in list(unique_idxs)]), axis=0
     )
