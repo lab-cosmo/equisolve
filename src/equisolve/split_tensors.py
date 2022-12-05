@@ -13,7 +13,7 @@ def split_tensors(
     names: List[str] = ["structure"],
     n_groups: int = None,
     group_sizes_abs: List[int] = None,
-    groups_sizes_rel: List[float] = None,
+    group_sizes_rel: List[float] = None,
     random_seed: int = None,
 ):
     """
