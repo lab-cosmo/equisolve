@@ -6,5 +6,7 @@
 # Released under the GNU Public Licence, v3 or any higher version
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from .split_tensors import split_tensors, get_unique_indices
+
 __version__ = "0.0.0-dev"
 __authors__ = "the equisolve development team"
