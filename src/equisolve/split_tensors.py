@@ -3,14 +3,14 @@ import warnings
 
 import numpy as np
 
-from equistore import TensorBlock, TensorMap
+from equistore import Labels, TensorBlock, TensorMap
 from equistore.operations import split
 
 
 def split_tensors(
     tensors: List[TensorMap],
-    axis: str = "samples",
-    names: List[str] = ["structure"],
+    axis: str = None,
+    names: List[str] = None,
     n_groups: int = None,
     group_sizes_abs: List[int] = None,
     group_sizes_rel: List[float] = None,
@@ -75,7 +75,7 @@ def split_tensors(
     _check_split_args(
         tensors,
         axis,
-        names,
+        names,  # TODO: check order of names
         n_groups,
         group_sizes_abs,
         group_sizes_rel,
