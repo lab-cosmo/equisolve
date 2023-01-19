@@ -44,9 +44,16 @@ def properties_to_tensormap(
 ):
     """Create a class:``equistore.TensorMap`` from array like properties.
 
-    :values: List of length N
-    :positions_gradients: list of length N
-    :param cell_gradients: array of shape (N, 3, 3)
+    :param values: array like object of dimension N, for example the energies for each
+                   structure
+    :param positions_gradients: list of length N with each entry i containing an array
+                                like objects with dimension (M_i, 3), for example the
+                                negative forces for each atom for all structures)
+    :param cell_gradients: array like objects of dimension (N, 3, 3), for example the
+                           virial stress of a structure
+    :param is_structure_property: boolean that determines if values correspond to a
+                                  structure or atomic property, this feature is not
+                                  implemented yet.
     """
 
     if not (is_structure_property):
@@ -72,11 +79,12 @@ def properties_to_tensormap(
                 f"{len(positions_gradients)} positions_gradients values"
             )
 
-        data = np.concatenate(positions_gradients, axis=0)
+        gradient_data = np.concatenate(positions_gradients, axis=0)
 
-        if data.shape[1] != 3:
+        if gradient_data.shape[1] != 3:
             raise ValueError(
-                f"positions_gradient must have 3 dimensions but has {data.shape[1]}"
+                "positions_gradient must have 3 dimensions but has "
+                f"{gradient_data.shape[1]}"
             )
 
         position_gradient_samples = Labels(
@@ -92,7 +100,7 @@ def properties_to_tensormap(
 
         block.add_gradient(
             parameter="positions",
-            data=data.reshape(-1, 3, 1),
+            data=gradient_data.reshape(-1, 3, 1),
             samples=position_gradient_samples,
             components=[Labels(["direction"], np.arange(3).reshape(-1, 1))],
         )
@@ -104,12 +112,12 @@ def properties_to_tensormap(
                 f"{len(cell_gradients)} cell_gradients values"
             )
 
-        data = np.asarray(cell_gradients)
+        gradient_data = np.asarray(cell_gradients)
 
-        if data.shape[1:] != (3, 3):
+        if gradient_data.shape[1:] != (3, 3):
             raise ValueError(
                 "cell_gradient data must be a 3 x 3 matrix"
-                f"but is {data.shape[1]} x {data.shape[2]}"
+                f"but is {gradient_data.shape[1]} x {gradient_data.shape[2]}"
             )
 
         cell_gradient_samples = Labels(
@@ -123,7 +131,7 @@ def properties_to_tensormap(
 
         block.add_gradient(
             parameter="cell",
-            data=data.reshape(-1, 3, 3, 1),
+            data=gradient_data.reshape(-1, 3, 3, 1),
             samples=cell_gradient_samples,
             components=components,
         )
