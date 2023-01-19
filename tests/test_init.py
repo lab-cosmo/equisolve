@@ -12,5 +12,6 @@ import equisolve
 def test_version_exist():
     equisolve.__version__
 
+
 def test_authors_exist():
     equisolve.__authors__
