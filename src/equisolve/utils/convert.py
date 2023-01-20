@@ -18,7 +18,7 @@ from equistore.block import TensorBlock
 
 def ase_to_tensormap(
     frames: List[ase.Atoms], energy: str = None, forces: str = None, stress: str = None
-):
+) -> TensorMap:
     """Store informations from :class:``ase.Atoms`` in a class:``equistore.TensorMap``.
 
     :param frames: ase.Atoms or list of ase.Atoms
@@ -49,7 +49,7 @@ def properties_to_tensormap(
     positions_gradients: List[np.ndarray] = None,
     cell_gradients: List[np.ndarray] = None,
     is_structure_property: bool = True,
-):
+) -> TensorMap:
     """Create a class:``equistore.TensorMap`` from array like properties.
 
     :param values: array like object of dimension N, for example the energies for each
@@ -60,7 +60,7 @@ def properties_to_tensormap(
     :param cell_gradients: array like objects of dimension (N, 3, 3), for example the
                            virial stress of a structure
     :param is_structure_property: boolean that determines if values correspond to a
-                                  structure or atomic property, this feature is not
+                                  structure or atomic property, this property is not
                                   implemented yet.
     """
 
@@ -69,21 +69,19 @@ def properties_to_tensormap(
             "Support for environment properties has not been implemented yet."
         )
 
-    n_properties = len(values)
-
-    samples = Labels(["structure"], np.arange(n_properties).reshape(-1, 1))
+    n_samples = len(values)
 
     block = TensorBlock(
         values=np.asarray(values).reshape(-1, 1),
-        samples=samples,
+        samples=Labels(["structure"], np.arange(n_samples).reshape(-1, 1)),
         components=[],
         properties=Labels(["property"], np.array([(0,)])),
     )
 
     if positions_gradients is not None:
-        if n_properties != len(positions_gradients):
+        if n_samples != len(positions_gradients):
             raise ValueError(
-                f"given {n_properties} values but "
+                f"given {n_samples} values but "
                 f"{len(positions_gradients)} positions_gradients values"
             )
 
@@ -114,9 +112,9 @@ def properties_to_tensormap(
         )
 
     if cell_gradients is not None:
-        if n_properties != len(cell_gradients):
+        if n_samples != len(cell_gradients):
             raise ValueError(
-                f"given {n_properties} values but "
+                f"given {n_samples} values but "
                 f"{len(cell_gradients)} cell_gradients values"
             )
 
@@ -128,9 +126,7 @@ def properties_to_tensormap(
                 f"but is {gradient_data.shape[1]} x {gradient_data.shape[2]}"
             )
 
-        cell_gradient_samples = Labels(
-            ["sample"], np.arange(n_properties).reshape(-1, 1)
-        )
+        cell_gradient_samples = Labels(["sample"], np.arange(n_samples).reshape(-1, 1))
 
         components = [
             Labels(["direction_1"], np.arange(3).reshape(-1, 1)),

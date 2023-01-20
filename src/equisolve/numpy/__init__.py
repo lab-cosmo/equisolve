@@ -6,5 +6,7 @@
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
 
-__version__ = "0.0.0-dev"
-__authors__ = "the equisolve development team"
+from . import models, utils
+
+
+__all__ = ["models", "utils", "preprocessing"]

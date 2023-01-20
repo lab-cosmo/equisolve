@@ -38,7 +38,6 @@ class TestConvert:
         return [i for i in self.rng.random([self.n_strucs, 3, 3])]
 
     def test_ase_to_tensormap(self, energies, forces, stress):
-
         frames = []
         for i in range(len(energies)):
             frame = ase.Atoms(self.n_atoms * "H")
@@ -62,7 +61,6 @@ class TestConvert:
         )
 
     def test_properties_to_tensormap(self, energies, forces, stress):
-
         property_tm = properties_to_tensormap(energies, forces, stress)
         block = property_tm.block()
 

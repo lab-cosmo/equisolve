@@ -6,4 +6,7 @@
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
 
-__all__ = []
+from .linear_model import Ridge
+
+
+__all__ = ["Ridge"]
