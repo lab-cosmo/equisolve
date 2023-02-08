@@ -9,7 +9,7 @@
 from typing import List, Optional, Union
 
 import numpy as np
-from equistore import Labels, TensorBlock, TensorMap
+from equistore import TensorBlock, TensorMap
 from equistore.operations import dot
 from equistore.operations._utils import _check_blocks, _check_maps
 
