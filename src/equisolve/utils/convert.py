@@ -95,11 +95,14 @@ def properties_to_tensormap(
                 f"{gradient_data.shape[1]}"
             )
 
+        # The `"sample"` label refers to the index of the corresponding value in the
+        # block. Here, the number of values is the same as the number of structures so
+        # we can keep `"sample"` and `"structure"` the same.
         position_gradient_samples = Labels(
             ["sample", "structure", "atom"],
             np.array(
                 [
-                    [s + a, s, a]
+                    [s, s, a]
                     for s in range(len(positions_gradients))
                     for a in range(len(positions_gradients[s]))
                 ]
