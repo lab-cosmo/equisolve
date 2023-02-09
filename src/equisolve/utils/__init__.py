@@ -7,6 +7,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from .convert import ase_to_tensormap, properties_to_tensormap
+from .metrics import rmse
 
 
-__all__ = ["ase_to_tensormap", "properties_to_tensormap"]
+__all__ = [
+    "ase_to_tensormap",
+    "properties_to_tensormap",
+    "rmse",
+]

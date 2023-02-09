@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('../../'))
 
 # -- Project information -----------------------------------------------------
 project = 'equisolve'
-copyright = 'All source code is available under the MIT License'
+copyright = 'All source code is available under the BSD3 License'
 author = equisolve.__authors__
 version = equisolve.__version__
 
@@ -28,17 +28,18 @@ version = equisolve.__version__
 # Add any Sphinx extension module names here, as strings.
 extensions = [
     'sphinx.ext.autodoc', # import the modules you are documenting
-    'sphinx.ext.viewcode', # tries to find the source files where the objects are contained
     'sphinx.ext.intersphinx', # generate links to the documentation of objects in external projects
-    'sphinx.ext.mathjax', # Render math via JavaScript
-    'sphinx.ext.napoleon', # Support for NumPy and Google style docstrings
-    'nbsphinx', # provides a source parser for *.ipynb files
+    "sphinx_gallery.gen_gallery", # provides a source parser for *.ipynb files
 ]
 
-# Execute the notebooks
-nbsphinx_execute = 'always'
-nbsphinx_allow_errors = False  # Fail if there are errors in notebook
-exclude_patterns = ['_build', '**.ipynb_checkpoints']
+sphinx_gallery_conf = {
+    "filename_pattern": "/*",
+    "examples_dirs": ["../../examples"],
+    "gallery_dirs": ["examples"],
+    "min_reported_time": 60,
+    "reference_url": {"equisolve": None},
+    "prefer_full_module": ["equisolve"],
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -185,5 +186,5 @@ intersphinx_mapping = {'https://docs.python.org/3/': None,
                        'https://docs.scipy.org/doc/scipy/': None,
                        'https://numpy.org/doc/stable/': None,
                        'https://lab-cosmo.github.io/equistore/latest/': None,
-                       'https://luthaf.fr/rascaline/latest/index.html': None,
+                       'https://luthaf.fr/rascaline/latest/': None,
                        }
