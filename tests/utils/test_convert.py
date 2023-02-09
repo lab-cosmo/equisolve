@@ -99,3 +99,43 @@ class TestConvert:
                 (1, 1, 3),
             ],
         )
+
+    def test_cell_gradient_samples(self, energies, stress):
+        """Test that the cell gradients sample labels agree with the convention."""
+
+        property_tm = properties_to_tensormap(energies, cell_gradients=stress)
+        block = property_tm.block()
+
+        samples = block.gradient("cell").samples
+
+        assert samples.names == ("sample",)
+
+        assert_equal(samples.tolist(), [(0,), (1,)])
+
+    def test_position_gradient_wrong_n_samples(self, energies):
+        """Test error raise if the length values and positions_gradients not equal."""
+        forces = [i for i in self.rng.random([self.n_strucs + 1, self.n_atoms, 3])]
+
+        with pytest.raises(ValueError, match="positions_gradients values"):
+            properties_to_tensormap(energies, positions_gradients=forces)
+
+    def test_position_gradient_wrong_shape(self, energies):
+        """Test error raise if position_gradients do not have 3 columns."""
+        forces = [i for i in self.rng.random([self.n_strucs, self.n_atoms, 2])]
+
+        with pytest.raises(ValueError, match="must have 3 columns but have 2"):
+            properties_to_tensormap(energies, positions_gradients=forces)
+
+    def test_cell_gradient_wrong_n_samples(self, energies):
+        """Test error raise if the length values and cell_gradients not equal."""
+        stress = [i for i in self.rng.random([self.n_strucs + 1, 2, 3])]
+        with pytest.raises(ValueError, match="cell_gradients values"):
+            properties_to_tensormap(energies, cell_gradients=stress)
+
+    def test_cell_gradient_wrong_shape(self, energies):
+        """Test error raise if cell_gradients are not 3x3 matrices."""
+
+        stress = [i for i in self.rng.random([self.n_strucs, 2, 3])]
+
+        with pytest.raises(ValueError, match="data must be a 3 x 3 matrix"):
+            properties_to_tensormap(energies, cell_gradients=stress)
