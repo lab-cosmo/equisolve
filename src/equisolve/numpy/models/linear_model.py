@@ -41,8 +41,8 @@ class Ridge:
                   zero if they are smaller than ``rcond`` times the largest singular
                   value in "coefficient" matrix.
 
-    :attr coef_: List :class:`numpy.ndarray`'s containing the weights for each block
-                 of the provided training Tensormap.
+    :attr coef_: List :class:`equistore.Tensormap` containing the weights of the
+                 provided training data.
     """
 
     def __init__(
@@ -59,7 +59,6 @@ class Ridge:
         self.alpha = alpha
         self.rcond = rcond
 
-        # Should we store coef_ also as a TensorMap?
         self.coef_ = None
 
     def _validate_data(self, X: TensorMap, y: Optional[TensorMap] = None) -> None:
@@ -135,11 +134,11 @@ class Ridge:
 
         regularization_all = np.hstack((sample_weights, alphas))
         regularization_eff = np.diag(np.sqrt(regularization_all))
+
         X_eff = regularization_eff @ np.vstack((X, np.eye(num_properties)))
         y_eff = regularization_eff @ np.hstack((y, np.zeros(num_properties)))
-        least_squares_output = np.linalg.lstsq(X_eff, y_eff, rcond=rcond)
-        w_solver = least_squares_output[0]
-        return w_solver
+
+        return np.linalg.lstsq(X_eff, y_eff, rcond=rcond)[0]
 
     def fit(
         self, X: TensorMap, y: TensorMap, sample_weight: Optional[TensorMap] = None
@@ -157,8 +156,7 @@ class Ridge:
         self._validate_data(X, y)
         self._validate_params(X, sample_weight)
 
-        coef = []
-        coef_tensor = []
+        coef_blocks = []
         for key, X_block in X:
             y_block = y.block(key)
             alpha_block = self.alpha.block(key)
@@ -184,19 +182,18 @@ class Ridge:
                 sw_arr = np.ones((len(y_arr),))
 
             w = self._numpy_lstsq_solver(X_arr, y_arr, sw_arr, alpha_arr, self.rcond)
-            coef.append(w.reshape(-1, 1))
+
             coef_block = TensorBlock(
-                values=w.reshape(-1, 1).T,
+                values=w.reshape(1, -1),
                 samples=y_block.properties,
                 components=[],
                 properties=X_block.properties,
             )
-            coef_tensor.append(coef_block)
+            coef_blocks.append(coef_block)
 
         # Convert alpha to a dictionary to be used in external models.
         self.alpha = tensor_map_to_dict(self.alpha)
-        self.coef_ = coef
-        self.coef_tensor = TensorMap(X.keys, coef_tensor)
+        self.coef_ = TensorMap(X.keys, coef_blocks)
 
         return self
 
@@ -207,50 +204,10 @@ class Ridge:
         :param X: samples
         :returns: predicted values
         """
-        # TODO general is fitted function
         if self.coef_ is None:
             raise ValueError("No weights. Call fit method first.")
 
-        if len(X.blocks()) != len(self.coef_):
-            raise ValueError(
-                f"Number of blocks in X ({len(X.blocks())}) does not agree "
-                f"with the number of fitted weights ({len(self.coef_)})."
-            )
-        # self.alpha = dict_to_tensor_map(self.alpha)
-
-        # blocks = []
-        # for i_block, X_block in enumerate(X.blocks()):
-        #     w = self.coef_[i_block]
-        #     n_samples = len(X_block.samples)
-
-        #     block = TensorBlock(
-        #         values=np.zeros([n_samples, 1]),
-        #         samples=Labels(["structure"], np.arange(n_samples).reshape(-1, 1)),
-        #         components=[],
-        #         properties=Labels(["property"], np.array([(0,)])),
-        #     )
-
-        #     for parameter in self.parameter_keys:
-        #         if parameter == "values":
-        #             block.values[:] = X_block.values @ w
-        #         else:
-        #             X_gradient = X_block.gradient(parameter)
-
-        #             data_flat = X_gradient.data.reshape(
-        #                 np.prod(X_gradient.data.shape[:-1]), X_gradient.data.shape[-1]
-        #             )
-        #             data_flat = data_flat @ w
-
-        #             block.add_gradient(
-        #                 parameter,
-        #                 data_flat.reshape(X_gradient.data.shape[:-1] + (1,)),
-        #                 X_gradient.samples,
-        #                 X_gradient.components,
-        #             )
-        #     blocks.append(block)
-
-        # self.alpha = tensor_map_to_dict(self.alpha)
-        return dot(X, self.coef_tensor)
+        return dot(X, self.coef_)
 
     def score(self, X: TensorMap, y: TensorMap, parameter_key: str) -> List[float]:
         """Return the coefficient of determination of the prediction.

@@ -98,9 +98,9 @@ class TestRidge:
         clf = Ridge(parameter_keys="values", alpha=alpha)
         clf.fit(X=X, y=y, sample_weight=sw)
 
-        assert len(clf.coef_) == 2  # We regress only one block
-        assert len(clf.coef_[0]) == num_properties  # We regress only one block
-        assert len(clf.coef_[1]) == num_properties
+        assert len(clf.coef_) == 2
+        assert clf.coef_.block(0).values.shape[1] == num_properties
+        assert clf.coef_.block(1).values.shape[1] == num_properties
 
     def test_double_fit_call(self):
         """Test if regression works properly if fit method is called multiple times.
@@ -143,7 +143,7 @@ class TestRidge:
         ridge_class = self.equisolve_solver_from_numpy_arrays(
             X, y, property_w, sample_w
         )
-        w_solver = ridge_class.coef_[0][:, 0]
+        w_solver = ridge_class.coef_.block().values[0, :]
 
         # Check that the two approaches yield the same result
         assert_allclose(w_solver, w_exact, atol=1e-13, rtol=1e-10)
@@ -175,7 +175,7 @@ class TestRidge:
         ridge_class = self.equisolve_solver_from_numpy_arrays(
             X, y, property_w, sample_w
         )
-        w_solver = ridge_class.coef_[0][:, 0]
+        w_solver = ridge_class.coef_.block().values[0, :]
         w_exact_with_regularization = self.numpy_solver(X, y, sample_w, property_w)
 
         # Check that the two approaches yield the same result
@@ -198,7 +198,7 @@ class TestRidge:
         ridge_class = self.equisolve_solver_from_numpy_arrays(
             X, y, property_w, sample_w
         )
-        w_solver = ridge_class.coef_[0]
+        w_solver = ridge_class.coef_.block().values[0, :]
 
         # Generate new data
         X_validation = self.rng.normal(mean, 1, size=(50, num_properties))
@@ -207,7 +207,10 @@ class TestRidge:
 
         # Check that the two approaches yield the same result
         assert_allclose(
-            y_validation_pred.block().values, y_validation_exact, atol=1e-15, rtol=1e-10
+            y_validation_pred.block().values[:, 0],
+            y_validation_exact,
+            atol=1e-15,
+            rtol=1e-10,
         )
 
     @pytest.mark.parametrize("num_properties", num_properties)
@@ -233,7 +236,7 @@ class TestRidge:
         ridge_class = self.equisolve_solver_from_numpy_arrays(
             X, y, property_w, sample_w
         )
-        w_solver = ridge_class.coef_[0][:, 0]
+        w_solver = ridge_class.coef_.block().values[0, :]
         w_zeros = np.zeros((num_properties,))
 
         # Check that the two approaches yield the same result
@@ -260,11 +263,11 @@ class TestRidge:
         ridge_class = self.equisolve_solver_from_numpy_arrays(
             X, y, property_w, sample_w
         )
-        w_ref = ridge_class.coef_[0][:, 0]
+        w_ref = ridge_class.coef_.block().values[0, :]
         ridge_class_scaled = self.equisolve_solver_from_numpy_arrays(
             X, y, scaling * property_w, scaling * sample_w
         )
-        w_scaled = ridge_class_scaled.coef_[0][:, 0]
+        w_scaled = ridge_class_scaled.coef_.block().values[0, :]
 
         # Check that the two approaches yield the same result
         assert_allclose(w_scaled, w_ref, atol=1e-15, rtol=1e-8)
@@ -290,11 +293,11 @@ class TestRidge:
         ridge_class = self.equisolve_solver_from_numpy_arrays(
             X, y, property_w, sample_w
         )
-        w_ref = ridge_class.coef_[0][:, 0]
+        w_ref = ridge_class.coef_.block().values[0, :]
         ridge_class_scaled = self.equisolve_solver_from_numpy_arrays(
             scaling * X, scaling * y, property_w, scaling * sample_w
         )
-        w_scaled = ridge_class_scaled.coef_[0][:, 0]
+        w_scaled = ridge_class_scaled.coef_.block().values[0, :]
 
         # Check that the two approaches yield the same result
         assert_allclose(w_scaled, w_ref, atol=1e-11, rtol=1e-8)
@@ -375,7 +378,9 @@ class TestRidge:
         clf = Ridge(parameter_keys=parameter_keys, alpha=alpha)
         clf.fit(X=X, y=y)
 
-        assert_allclose(clf.coef_[0], w_exact.reshape(-1, 1), atol=1e-15, rtol=1e-8)
+        assert_allclose(
+            clf.coef_.block().values, w_exact.reshape(1, -1), atol=1e-15, rtol=1e-8
+        )
 
         # Test prediction
         X_pred = clf.predict(X)
@@ -497,21 +502,3 @@ class TestRidge:
         clf = Ridge(parameter_keys="values", alpha=None)
         with pytest.raises(ValueError, match="No weights"):
             clf.predict(1)
-
-    def test_error_different_block_than_weights(self):
-        """Test error raise if predict X has different number of blocks than weights."""
-        X, y, alpha, sw = self.to_equistore(
-            X_arr=np.ones([self.num_targets[0], self.num_properties[0]]),
-            y_arr=np.ones(self.num_targets[0]),
-            alpha_arr=np.ones(self.num_properties[0]),
-            sw_arr=np.ones(self.num_targets[0]),
-        )
-
-        X_pred = tensor_to_tensormap(
-            np.ones([2, self.num_targets[0], self.num_properties[0]])
-        )
-
-        clf = Ridge(parameter_keys="values", alpha=alpha)
-        clf.fit(X=X, y=y, sample_weight=sw)
-        with pytest.raises(ValueError, match="Number of blocks"):
-            clf.predict(X_pred)
