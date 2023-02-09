@@ -25,6 +25,8 @@ def ase_to_tensormap(
     :param energy: key for extracting energy per structure
     :param forces: key for extracting atomic forces
     :param stress: key for extracting stress per structure
+
+    :returns: TensorMap containing the given information
     """
     if not isinstance(frames, list):
         frames = [frames]
@@ -62,6 +64,13 @@ def properties_to_tensormap(
     :param is_structure_property: boolean that determines if values correspond to a
                                   structure or atomic property, this property is not
                                   implemented yet.
+
+    :raises ValueError: if the length of `values`, `positions_gradients` or
+                        `cell_gradients` is not the same.
+    :raises ValueError: if each element in `positions_gradients` does not have 3 columns
+    :raises ValueError: if each element in `cell_gradients` is not a 3x3 matrix.
+
+    :returns: TensorMap containing the given properties
     """
 
     if not (is_structure_property):
@@ -69,19 +78,19 @@ def properties_to_tensormap(
             "Support for environment properties has not been implemented yet."
         )
 
-    n_samples = len(values)
+    n_structures = len(values)
 
     block = TensorBlock(
         values=np.asarray(values).reshape(-1, 1),
-        samples=Labels(["structure"], np.arange(n_samples).reshape(-1, 1)),
+        samples=Labels(["structure"], np.arange(n_structures).reshape(-1, 1)),
         components=[],
         properties=Labels(["property"], np.array([(0,)])),
     )
 
     if positions_gradients is not None:
-        if n_samples != len(positions_gradients):
+        if n_structures != len(positions_gradients):
             raise ValueError(
-                f"given {n_samples} values but "
+                f"given {n_structures} values but "
                 f"{len(positions_gradients)} positions_gradients values"
             )
 
@@ -89,7 +98,7 @@ def properties_to_tensormap(
 
         if gradient_data.shape[1] != 3:
             raise ValueError(
-                "positions_gradient must have 3 dimensions but has "
+                "positions_gradient must have 3 columns but have "
                 f"{gradient_data.shape[1]}"
             )
 
@@ -101,7 +110,7 @@ def properties_to_tensormap(
             np.array(
                 [
                     [s, s, a]
-                    for s in range(len(positions_gradients))
+                    for s in range(n_structures)
                     for a in range(len(positions_gradients[s]))
                 ]
             ),
@@ -115,9 +124,9 @@ def properties_to_tensormap(
         )
 
     if cell_gradients is not None:
-        if n_samples != len(cell_gradients):
+        if n_structures != len(cell_gradients):
             raise ValueError(
-                f"given {n_samples} values but "
+                f"given {n_structures} values but "
                 f"{len(cell_gradients)} cell_gradients values"
             )
 
@@ -129,7 +138,11 @@ def properties_to_tensormap(
                 f"but is {gradient_data.shape[1]} x {gradient_data.shape[2]}"
             )
 
-        cell_gradient_samples = Labels(["sample"], np.arange(n_samples).reshape(-1, 1))
+        # the values of the sample labels are chosen in the same way as for the
+        # positions_gradients. See comment above for a detailed explanation.
+        cell_gradient_samples = Labels(
+            ["sample"], np.array([[s] for s in range(n_structures)])
+        )
 
         components = [
             Labels(["direction_1"], np.arange(3).reshape(-1, 1)),
