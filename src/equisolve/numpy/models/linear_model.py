@@ -47,19 +47,27 @@ class Ridge:
 
     def __init__(
         self,
-        parameter_keys: Union[List[str], str],
-        alpha: TensorMap,
+        parameter_keys: Union[List[str], str] = None,
+        alpha: TensorMap = None,
         rcond: float = 1e-13,
     ) -> None:
+        if parameter_keys is None:
+            paramater_keys = ["values", "positions"]
         if type(parameter_keys) not in (list, tuple, np.ndarray):
             self.parameter_keys = [parameter_keys]
         else:
             self.parameter_keys = parameter_keys
 
+
+        # TODO(philip) can we make a good default alpha parameter out of paramater_keys?
+        if alpha is None:
+            raise NotImplemented("Ridge still needs a good default alpha value")
         self.alpha = alpha
         self.rcond = rcond
 
         self.coef_ = None
+
+        self.alpha = tensor_map_to_dict(self.alpha)
 
     def _validate_data(self, X: TensorMap, y: Optional[TensorMap] = None) -> None:
         """Validates :class:`equistore.TensorBlock`'s for the usage in models.
@@ -191,9 +199,10 @@ class Ridge:
             )
             coef_blocks.append(coef_block)
 
-        # Convert alpha to a dictionary to be used in external models.
-        self.alpha = tensor_map_to_dict(self.alpha)
         self.coef_ = TensorMap(X.keys, coef_blocks)
+        # Convert alpha and coefs to a dictionary to be used in external models.
+        self.alpha = tensor_map_to_dict(self.alpha)
+        self.coef_ = tensor_map_to_dict(self.coef_)
 
         return self
 
@@ -207,9 +216,12 @@ class Ridge:
         if self.coef_ is None:
             raise ValueError("No weights. Call fit method first.")
 
-        return dot(X, self.coef_)
+        self.coef_ = dict_to_tensor_map(self.coef_)
+        y_pred = dot(X, self.coef_)
+        self.coef_ = tensor_map_to_dict(self.coef_)
+        return y_pred
 
-    def score(self, X: TensorMap, y: TensorMap, parameter_key: str) -> List[float]:
+    def score(self, X: TensorMap, y: TensorMap, parameter_key: str) -> List[float]: # COMMENT why does it return list of floats if we just allow one paramater_key?
         """Return the coefficient of determination of the prediction.
 
         :param X: Test samples
