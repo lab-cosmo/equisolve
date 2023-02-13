@@ -6,7 +6,7 @@
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
 
-from . import models, utils
+from . import models, scripts, utils
 
 
-__all__ = ["models", "utils", "preprocessing"]
+__all__ = ["models", "utils", "preprocessing", "scripts"]

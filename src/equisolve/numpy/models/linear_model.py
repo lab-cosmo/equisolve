@@ -58,8 +58,8 @@ class Ridge:
         else:
             self.parameter_keys = parameter_keys
 
-
-        # TODO(philip) can we make a good default alpha parameter out of paramater_keys?
+        # TODO: Move alpha to fit function and allow floats by using multiply from
+        # equistore.
         if alpha is None:
             raise NotImplemented("Ridge still needs a good default alpha value")
         self.alpha = alpha
@@ -221,7 +221,11 @@ class Ridge:
         self.coef_ = tensor_map_to_dict(self.coef_)
         return y_pred
 
-    def score(self, X: TensorMap, y: TensorMap, parameter_key: str) -> List[float]: # COMMENT why does it return list of floats if we just allow one paramater_key?
+    def score(
+        self, X: TensorMap, y: TensorMap, parameter_key: str
+    ) -> List[
+        float
+    ]:  # COMMENT why does it return list of floats if we just allow one paramater_key?
         """Return the coefficient of determination of the prediction.
 
         :param X: Test samples
