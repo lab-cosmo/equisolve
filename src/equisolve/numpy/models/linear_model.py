@@ -9,8 +9,8 @@
 from typing import List, Optional, Union
 
 import numpy as np
-from equistore import TensorBlock, TensorMap
-from equistore.operations import dot
+from equistore import Labels, TensorBlock, TensorMap
+from equistore.operations import dot, multiply, ones_like, slice
 from equistore.operations._utils import _check_blocks, _check_maps
 
 from ...utils.metrics import rmse
@@ -32,42 +32,20 @@ class Ridge:
     :param parameter_keys: Parameters to perform the regression for.
                            Examples are ``"values"``, ``"positions"`` or
                            ``"cell"``.
-    :param alpha: Constant :math:`λ` that multiplies the L2 term, controlling
-                  regularization strength. Values must be a non-negative floats
-                  i.e. in [0, inf). :math:`λ` can be different for each column in ``X``
-                  to regulerize each property differently.
-    :param rcond: Cut-off ratio for small singular values during the fit. For
-                  the purposes of rank determination, singular values are treated as
-                  zero if they are smaller than ``rcond`` times the largest singular
-                  value in "coefficient" matrix.
-
-    :attr coef_: List :class:`equistore.Tensormap` containing the weights of the
-                 provided training data.
     """
 
     def __init__(
         self,
         parameter_keys: Union[List[str], str] = None,
-        alpha: TensorMap = None,
-        rcond: float = 1e-13,
     ) -> None:
         if parameter_keys is None:
-            paramater_keys = ["values", "positions"]
+            self.paramater_keys = ["values", "positions"]
         if type(parameter_keys) not in (list, tuple, np.ndarray):
             self.parameter_keys = [parameter_keys]
         else:
             self.parameter_keys = parameter_keys
 
-        # TODO: Move alpha to fit function and allow floats by using multiply from
-        # equistore.
-        if alpha is None:
-            raise NotImplemented("Ridge still needs a good default alpha value")
-        self.alpha = alpha
-        self.rcond = rcond
-
-        self.coef_ = None
-
-        self.alpha = tensor_map_to_dict(self.alpha)
+        self._coef = None
 
     def _validate_data(self, X: TensorMap, y: Optional[TensorMap] = None) -> None:
         """Validates :class:`equistore.TensorBlock`'s for the usage in models.
@@ -97,7 +75,10 @@ class Ridge:
                     )
 
     def _validate_params(
-        self, X: TensorBlock, sample_weight: Optional[TensorBlock] = None
+        self,
+        X: TensorBlock,
+        alpha: TensorBlock,
+        sample_weight: Optional[TensorBlock] = None,
     ) -> None:
         """Check regulerizer and sample weights have are correct wrt. to``X``.
 
@@ -105,13 +86,13 @@ class Ridge:
         :param sample_weight: sample weights
         """
 
-        _check_maps(X, self.alpha, "_validate_params")
+        _check_maps(X, alpha, "_validate_params")
 
         if sample_weight is not None:
             _check_maps(X, sample_weight, "_validate_params")
 
         for key, X_block in X:
-            alpha_block = self.alpha.block(key)
+            alpha_block = alpha.block(key)
             _check_blocks(
                 X_block, alpha_block, props=["properties"], fname="_validate_params"
             )
@@ -149,25 +130,49 @@ class Ridge:
         return np.linalg.lstsq(X_eff, y_eff, rcond=rcond)[0]
 
     def fit(
-        self, X: TensorMap, y: TensorMap, sample_weight: Optional[TensorMap] = None
+        self,
+        X: TensorMap,
+        y: TensorMap,
+        alpha: Union[float, TensorMap] = 1.0,
+        sample_weight: Optional[TensorMap] = None,
+        rcond: float = 1e-13,
     ) -> None:
         """Fit Ridge regression model to each block in X.
 
         :param X: training data
         :param y: target values
+        :param alpha: Constant :math:`λ` that multiplies the L2 term, controlling
+                      regularization strength. Values must be a non-negative floats
+                      i.e. in [0, inf). :math:`λ` can be different for each column in ``X``
+                      to regulerize each property differently.
         :param sample_weight: sample weights
+        :param rcond: Cut-off ratio for small singular values during the fit. For
+                    the purposes of rank determination, singular values are treated as
+                    zero if they are smaller than ``rcond`` times the largest singular
+                    value in "coefficient" matrix.
         """
-        # If alpha was converted we convert it back here.
-        if type(self.alpha) == dict:
-            self.alpha = dict_to_tensor_map(self.alpha)
+
+        if type(alpha) is float:
+            alpha_tensor = ones_like(X)
+
+            samples = Labels(
+                names=X.sample_names,
+                values=np.zeros([1, len(X.sample_names)], dtype=int),
+            )
+
+            alpha_tensor = slice(alpha_tensor, samples=samples)
+            alpha = multiply(alpha_tensor, alpha)
+
+        if type(alpha) is not TensorMap:
+            raise ValueError("alpha must either be a float or a TensorMap")
 
         self._validate_data(X, y)
-        self._validate_params(X, sample_weight)
+        self._validate_params(X, alpha, sample_weight)
 
         coef_blocks = []
         for key, X_block in X:
             y_block = y.block(key)
-            alpha_block = self.alpha.block(key)
+            alpha_block = alpha.block(key)
 
             # X_arr has shape of (n_targets, n_properties)
             X_arr = block_to_array(X_block, self.parameter_keys)
@@ -189,7 +194,7 @@ class Ridge:
             else:
                 sw_arr = np.ones((len(y_arr),))
 
-            w = self._numpy_lstsq_solver(X_arr, y_arr, sw_arr, alpha_arr, self.rcond)
+            w = self._numpy_lstsq_solver(X_arr, y_arr, sw_arr, alpha_arr, rcond)
 
             coef_block = TensorBlock(
                 values=w.reshape(1, -1),
@@ -199,12 +204,19 @@ class Ridge:
             )
             coef_blocks.append(coef_block)
 
-        self.coef_ = TensorMap(X.keys, coef_blocks)
-        # Convert alpha and coefs to a dictionary to be used in external models.
-        self.alpha = tensor_map_to_dict(self.alpha)
-        self.coef_ = tensor_map_to_dict(self.coef_)
+        # convert coefs to dictionary allowing dump of an instance in a pickle file
+        self._coef = tensor_map_to_dict(TensorMap(X.keys, coef_blocks))
 
         return self
+
+    @property
+    def coef(self) -> TensorMap:
+        """``Tensormap`` containing the weights of the provided training data."""
+
+        if self._coef is None:
+            raise ValueError("No weights. Call fit method first.")
+
+        return dict_to_tensor_map(self._coef)
 
     def predict(self, X: TensorMap) -> TensorMap:
         """
@@ -213,19 +225,9 @@ class Ridge:
         :param X: samples
         :returns: predicted values
         """
-        if self.coef_ is None:
-            raise ValueError("No weights. Call fit method first.")
+        return dot(X, self.coef)
 
-        self.coef_ = dict_to_tensor_map(self.coef_)
-        y_pred = dot(X, self.coef_)
-        self.coef_ = tensor_map_to_dict(self.coef_)
-        return y_pred
-
-    def score(
-        self, X: TensorMap, y: TensorMap, parameter_key: str
-    ) -> List[
-        float
-    ]:  # COMMENT why does it return list of floats if we just allow one paramater_key?
+    def score(self, X: TensorMap, y: TensorMap, parameter_key: str) -> float:
         """Return the coefficient of determination of the prediction.
 
         :param X: Test samples
