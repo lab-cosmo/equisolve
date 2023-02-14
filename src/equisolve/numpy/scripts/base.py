@@ -8,11 +8,13 @@
 
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
-from typing import List, Tuple, TypeVar
+from typing import List, Tuple, Dict, TypeVar
 
 from equistore import TensorMap
 
 from ...utils.metrics import rmse
+
+import numpy as np
 
 # Workaround for typing Self with inheritance for python <3.11
 # see https://peps.python.org/pep-0673/
@@ -61,7 +63,7 @@ class EquiScriptBase(metaclass=ABCMeta):
         *,
         feature_aggregation="mean",
         transformer_X=None,
-        transformer_y=None,
+        transformer_y=None, # TODO to a basisclass that ensures that inverse_transform and so an are implemented
         estimator=None
     ):
         self.hypers = hypers
@@ -70,7 +72,17 @@ class EquiScriptBase(metaclass=ABCMeta):
         self.transformer_y = transformer_y
         self.estimator = estimator
 
-    def fit(self, X: Tuple[TensorMap, ...], y: TensorMap, **kwargs) -> TEquiScript:
+    # FOR ALEX TO REMEMBER the reasoning for private and public member variables 
+    # COMMENT it is easier for some classes (MultiSpectra) to assume that the init paramaters are never changed
+    #         so we do not allow public setting, this is because unlike scikit estimators we have a compute and a fit function
+    #         that both rely on the same member variables.
+    #         For example in MultiSpectra: spectra values may not change between compute and fit
+    # COMMENT I don't know if just keeping the private ones (e.g. _hypers) is the better solution,
+    #         the idea is that if during compute or fit the default values for None objects changes depending on the given arguments,
+    #         then one needs to know that the input argument was None, otherwise you overwrite them with one fit or compute call
+    # COMMENT I changed code such that _join and fit are completetly independent, so we can actually keep it this way
+
+    def fit(self, X: Dict[str, TensorMap], y: TensorMap, **kwargs) -> TEquiScript:
         """TODO"""
         # X : (X0, X1, ..., XN)
         self._set_and_check_fit_parameters()
@@ -81,16 +93,23 @@ class EquiScriptBase(metaclass=ABCMeta):
         if "estimator" not in kwargs.keys():
             kwargs["estimator"] = {}
 
+        # TODO move to check and set?
         if self.transformer_X is None:
             self._transformer_X = None
         else:
             if isinstance(self.transformer_X, list):
+                if len(self.transformer_X) != len(X):
+                    raise ValueError(f"List of transformers and list of descriptors have different length {len(self.transformer_X)} != {len(X)}")
                 self._transformer_X = deepcopy(self.transformer_X)
+                for i, descriptor_key, Xi in enumerate(X.items()):
+                    self._transformer_X.append(
+                        self._transformer_X[i].fit(Xi, **kwargs["transformer_X"])
+                    )
             else:
                 self._transformer_X = []
-                for i in range(len(T)):
+                for descriptor_key, Xi in X.items():
                     self._transformer_X.append(
-                        deepcopy(self.transformer_X).fit(X[i], **kwargs["transformer_X"])
+                        deepcopy(self.transformer_X).fit(Xi, **kwargs["transformer_X"])
                     )
 
         if self.transformer_y is None:
@@ -101,49 +120,50 @@ class EquiScriptBase(metaclass=ABCMeta):
             )
 
         if self.transformer_X is not None:
-            X = tuple(
-                self._transformer_X[i].transform(X[i])
-                for i in range(len(self._transformer_X))
-            )
+            X = {descriptor_key:
+                self._transformer_X[i].transform(Xi)
+                    for i, (descriptor_key, Xi) in enumerate(X.items())
+            }
 
         if self.transformer_y is not None:
             y = self._transformer_y.transform(y)
 
         X = self._join(X)
 
+        # TODO move to check and set?
         if self.estimator is None:
             self._estimator = None
         else:
             self._estimator = deepcopy(self.estimator).fit(X, y, **kwargs["estimator"])
 
-    def forward(self, X: Tuple[TensorMap, ...]) -> TensorMap:
+    def forward(self, X: Dict[str, TensorMap]) -> TensorMap:
         """TODO"""
         # TODO check if is fitted
 
         if self._transformer_X is not None:
-            X = tuple(
-                self._transformer_X[i].transform(X[i])
-                for i in range(len(self._transformer_X))
-            )
+            X = {descriptor_key:
+                self._transformer_X[i].transform(Xi)
+                    for i, (descriptor_key, Xi) in enumerate(X.items())
+            }
         if self._transformer_y is not None:
             y = self._transformer_y.transform(y)
 
-        if len(X) > 1:
-            try:
-                X = self._join(X)
-            except NotImplemented as e:
-                raise NotImplemented(
-                    "More than one X. But join function is not implemented!"
-                ) from e
+        # COMMENT we cannot do this because the join funciton also aggregates at tho moment
+        #         maybe we can split this better
+        #if len(X) > 1:
+        #    # COMMENT I removed the error because it should be thrown in the _join function right?
+
+        X_ = self._join(X)
+
+        if self._estimator is None:
+            return X_
         else:
-            X = X[0]
+            y_pred = self._estimator.predict(X_)
+            if self._transformer_y is not None:
+                y_pred = self._transformer_y.inverse_transform(y_pred)
+            return y_pred
 
-        y_pred = self._estimator.predict(X)
-        if self._transformer_y is not None:
-            y_pred = self._transformer_y.inverse_transform(y_pred)
-        return y_pred
-
-    def score(self, X: Tuple[TensorMap, ...], y) -> List[float]:
+    def score(self, X: Dict[str, TensorMap], y) -> List[float]:
         """TODO"""
         # TODO(low-prio) add support for more error functions
         if self._estimator is None:
