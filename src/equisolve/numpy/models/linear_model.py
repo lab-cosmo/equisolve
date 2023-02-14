@@ -241,4 +241,4 @@ class Ridge:
         if parameter_keys is None:
             parameter_keys = self.parameter_keys
         y_pred = self.predict(X)
-        return [rmse(y, y_pred, parameter_key) for parameter_key in parameter_keys]
+        return np.mean([rmse(y, y_pred, parameter_key) for parameter_key in parameter_keys])

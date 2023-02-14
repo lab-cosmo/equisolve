@@ -151,7 +151,7 @@ class EquiScriptBase(metaclass=ABCMeta):
 
         y_pred =  self.forward(X)
 
-        return [rmse(y, y_pred, parameter_key) for parameter_key in self._estimator.parameter_keys]
+        return np.mean([rmse(y, y_pred, parameter_key) for parameter_key in self._estimator.parameter_keys])
 
 
     def _set_and_check_fit_parameters(self) -> None:
