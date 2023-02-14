@@ -8,6 +8,7 @@
 
 from .lode import LodeScript
 from .multispectra import MultiSpectraScript
+from .md_calculator import GenericMDCalculator
 
 
-__all__ = ["MultiSpectraScript", "LodeScript"]
+__all__ = ["MultiSpectraScript", "LodeScript", "GenericMDCalculator"]
