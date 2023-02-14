@@ -6,8 +6,8 @@
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
 
-from .lode import LodeKitScript
-from .multispectra import MultiSpectraKitScript
+from .lode import LodeScript
+from .multispectra import MultiSpectraScript
 
 
-__all__ = ["MultiSpectraKitScript", "LodeKitScript"]
+__all__ = ["MultiSpectraScript", "LodeScript"]

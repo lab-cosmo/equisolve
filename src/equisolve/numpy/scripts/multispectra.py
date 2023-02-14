@@ -12,10 +12,12 @@ from typing import List, Set, Tuple, Union
 from equistore import TensorMap
 from equistore.operations import join, mean_over_samples, sum_over_samples
 
+from rascaline import Composition, SoapRadialSpectrum, SoapPowerSpectrum
+
 from .base import EquiScriptBase
 
 
-class MultiSpectraKitScript(EquiScriptBase):
+class MultiSpectraScript(EquiScriptBase):
     def __init__(
         self,
         hypers: dict,
@@ -24,19 +26,18 @@ class MultiSpectraKitScript(EquiScriptBase):
         feature_aggregation="mean",
         transformer_X=None,
         transformer_y=None,
-        estimator=None,
-        parameter_keys=None,
+        estimator=None
     ):
         super().__init__(
             hypers,
             feature_aggregation=feature_aggregation,
             transformer_X=transformer_X,
             transformer_y=transformer_y,
-            estimator=estimator,
-            parameter_keys=parameter_keys,
+            estimator=estimator
         )
+        self.spectra = spectra
 
-    def _set_and_check_fitting_parameters(self):
+    def _set_and_check_compute_parameters(self):
         if "SoapRadialSpectrum" not in self.hypers.keys():
             raise ValueError("No SoapRadialSpectrum given")
         if "SoapPowerSpectrum" not in self.hypers.keys():
@@ -48,10 +49,13 @@ class MultiSpectraKitScript(EquiScriptBase):
                 raise ValueError(
                     f"Only SoapRadialSpectrum and SoapPowerSpectrum as keys in hypers are allowed, but {key} found"
                 )
-        super()._set_and_check_fitting_parameters()
+        self._hypers = self.hypers
+
+    def _set_and_check_fit_parameters(self) -> None:
+        super()._set_and_check_fit_parameters()
 
         if self.spectra is None:
-            self._spectra = set(0, 1, 2)
+            self._spectra = set([0, 1, 2])
         else:
             # checks if only nu=0,1,2 are used by checking ∅ == spectra - {0,1,2}
             spectra_besides_nu012 = set(self.spectra).difference(set([0, 1, 2]))
@@ -65,6 +69,7 @@ class MultiSpectraKitScript(EquiScriptBase):
     def compute(self, **kwargs) -> Tuple[TensorMap, ...]:
         # input **kwargs same as for a rascaline calculator
         # outputs the (X0, X1, ..., XN), y TensorMap
+        self._set_and_check_compute_parameters()
 
         descriptor_nu0 = Composition().compute(**kwargs)
         descriptor_nu1 = SoapRadialSpectrum(
@@ -85,19 +90,21 @@ class MultiSpectraKitScript(EquiScriptBase):
         # moving keys to properties
         descriptor_nu0 = descriptor_nu0.keys_to_properties(["species_center"])
 
-        keys_to_move_to_samples = ["species_center", "spherical_harmonics_l"]
-        keys_to_move_to_properties = ["species_neighbor_1", "species_neighbor_2"]
-
+        keys_to_move_to_samples = ["species_center"]
+        keys_to_move_to_properties = ["species_neighbor"]
         descriptor_nu1 = descriptor_nu1.keys_to_samples(keys_to_move_to_samples)
         descriptor_nu1 = descriptor_nu1.keys_to_properties(keys_to_move_to_properties)
 
+        keys_to_move_to_samples = ["species_center"]
+        keys_to_move_to_properties = ["species_neighbor_1", "species_neighbor_2"]
         descriptor_nu2 = descriptor_nu2.keys_to_samples(keys_to_move_to_samples)
         descriptor_nu2 = descriptor_nu2.keys_to_properties(keys_to_move_to_properties)
 
         # aggregation
-        samples_names = ["center", "species_center", "spherical_harmonics_l"]
+        samples_names = ["center", "species_center"]
         if self._feature_aggregation == "sum":
             descriptor_nu0 = sum_over_samples(descriptor_nu0, samples_names=["center"])
+            samples_names = ["center", "species_center"]
             descriptor_nu1 = sum_over_samples(
                 descriptor_nu1, samples_names=samples_names
             )

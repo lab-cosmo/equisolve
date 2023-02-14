@@ -10,12 +10,13 @@ from typing import List, Set, Tuple
 
 from equistore import TensorMap
 from equistore.operations import join, mean_over_samples, sum_over_samples
-from rascaline import LodeSphericalExpansion, SphericalExpansion
+
+from rascaline import Composition, LodeSphericalExpansion, SphericalExpansion
 
 from .base import EquiScriptBase
 
 
-class LodeKitScript(EquiScriptBase):
+class LodeScript(EquiScriptBase):
     def __init__(
         self,
         hypers,
@@ -23,8 +24,7 @@ class LodeKitScript(EquiScriptBase):
         feature_aggregation="mean",
         transformer_X=None,
         transformer_y=None,
-        estimator=None,
-        parameter_keys=None,
+        estimator=None
     ):
         super().__init__(
             hypers,
@@ -32,10 +32,9 @@ class LodeKitScript(EquiScriptBase):
             transformer_X=transformer_X,
             transformer_y=transformer_y,
             estimator=estimator,
-            parameter_keys=parameter_keys,
         )
 
-    def _set_and_check_fitting_parameters(self):
+    def _set_and_check_compute_parameters(self):
         if "SphericalExpansion" not in self.hypers.keys():
             raise ValueError("No SphericalExpansion given")
         if "LodeSphericalExpansion" not in self.hypers.keys():
@@ -46,9 +45,13 @@ class LodeKitScript(EquiScriptBase):
                 raise ValueError(
                     f"Only SphericalExpansion and LodeSphericalExpansion as keys in hypers are allowed, but {key} found"
                 )
-        super()._set_and_check_fitting_parameters()
+        self._hypers = self.hypers
+
+    def _set_and_check_fit_parameters(self):
+        super()._set_and_check_fit_parameters()
 
     def compute(self, **kwargs) -> Tuple[TensorMap, ...]:
+        self._set_and_check_compute_parameters()
         pass
         # input **kwargs same as for a rascaline calculator
         # outputs the (X0, X1, ..., XN), y TensorMaps

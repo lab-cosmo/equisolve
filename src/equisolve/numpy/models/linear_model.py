@@ -227,16 +227,18 @@ class Ridge:
         """
         return dot(X, self.coef)
 
-    def score(self, X: TensorMap, y: TensorMap, parameter_key: str) -> float:
+    def score(self, X: TensorMap, y: TensorMap, parameter_keys: Union[List[str], str] = None) -> float:
         """Return the coefficient of determination of the prediction.
 
         :param X: Test samples
         :param y: True values for `X`.
-        :param parameter_key: Parameter to score for. Examples are ``"values"``,
+        :param parameter_keys: Parameter to score for. Examples are ``"values"``,
                               ``"positions"`` or ``"cell"``.
 
         :returns score: :math:`RMSE` for each block in ``self.predict(X)`` with
                         respecy to `y`.
         """
+        if parameter_keys is None:
+            parameter_keys = self.parameter_keys
         y_pred = self.predict(X)
-        return rmse(y, y_pred, parameter_key)
+        return [rmse(y, y_pred, parameter_key) for parameter_key in parameter_keys]
