@@ -93,6 +93,9 @@ class EquiScriptBase(metaclass=ABCMeta):
         if "estimator" not in kwargs.keys():
             kwargs["estimator"] = {}
 
+        X = self._move(X)
+        X = self._aggregate(X)
+
         # TODO move to check and set?
         if self.transformer_X is None:
             self._transformer_X = None
@@ -101,7 +104,7 @@ class EquiScriptBase(metaclass=ABCMeta):
                 if len(self.transformer_X) != len(X):
                     raise ValueError(f"List of transformers and list of descriptors have different length {len(self.transformer_X)} != {len(X)}")
                 self._transformer_X = deepcopy(self.transformer_X)
-                for i, descriptor_key, Xi in enumerate(X.items()):
+                for i, (descriptor_key, Xi) in enumerate(X.items()):
                     self._transformer_X.append(
                         self._transformer_X[i].fit(Xi, **kwargs["transformer_X"])
                     )
@@ -125,10 +128,11 @@ class EquiScriptBase(metaclass=ABCMeta):
                     for i, (descriptor_key, Xi) in enumerate(X.items())
             }
 
+        X = self._join(X)
+
         if self.transformer_y is not None:
             y = self._transformer_y.transform(y)
 
-        X = self._join(X)
 
         # TODO move to check and set?
         if self.estimator is None:
@@ -140,25 +144,25 @@ class EquiScriptBase(metaclass=ABCMeta):
         """TODO"""
         # TODO check if is fitted
 
+        X = self._move(X)
+        X = self._aggregate(X)
+
         if self._transformer_X is not None:
             X = {descriptor_key:
                 self._transformer_X[i].transform(Xi)
                     for i, (descriptor_key, Xi) in enumerate(X.items())
             }
-        if self._transformer_y is not None:
-            y = self._transformer_y.transform(y)
-
         # COMMENT we cannot do this because the join funciton also aggregates at tho moment
         #         maybe we can split this better
         #if len(X) > 1:
         #    # COMMENT I removed the error because it should be thrown in the _join function right?
 
-        X_ = self._join(X)
+        X = self._join(X)
 
         if self._estimator is None:
-            return X_
+            return X
         else:
-            y_pred = self._estimator.predict(X_)
+            y_pred = self._estimator.predict(X)
             if self._transformer_y is not None:
                 y_pred = self._transformer_y.inverse_transform(y_pred)
             return y_pred
@@ -200,7 +204,18 @@ class EquiScriptBase(metaclass=ABCMeta):
         raise NotImplemented("Only implemented in child classes")
 
     @abstractmethod
-    def _join(self, X: Tuple[TensorMap, ...]) -> TensorMap:
+    def _move(self, X: Dict[str, TensorMap]) -> Dict[str, TensorMap]:
         """TODO"""
         raise NotImplemented("Only implemented in child classes")
+
+    @abstractmethod
+    def _aggregate(self, X: Dict[str, TensorMap]) -> Dict[str, TensorMap]:
+        """TODO"""
+        raise NotImplemented("Only implemented in child classes")
+
+    @abstractmethod
+    def _join(self, X: Dict[str, TensorMap]) -> TensorMap:
+        """TODO"""
+        raise NotImplemented("Only implemented in child classes")
+
 

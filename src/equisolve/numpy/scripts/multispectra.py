@@ -80,56 +80,51 @@ class MultiSpectraScript(EquiScriptBase):
 
         return descriptors
 
-    def _join(self, X: Dict[str, TensorMap]) -> TensorMap:
+    def _move(self, X: Dict[str, TensorMap]) -> Dict[str, TensorMap]:
         # inputs the (X0, X1, ..., XN) TensorMaps
         # outputs the X, y TensorMaps where X joined X0, X1, ..., XN in a way defined here
-        X_reshape = {}
+        X_moved = {}
         if "Composition" in X.keys():
             keys_to_move_to_samples = ["species_center"]
-            X_reshape["Composition"] = X["Composition"].keys_to_properties(keys_to_move_to_samples)
+            X_moved["Composition"] = X["Composition"].keys_to_properties(keys_to_move_to_samples)
 
         if "SoapRadialSpectrum" in X.keys():
             keys_to_move_to_samples = ["species_center"]
             keys_to_move_to_properties = ["species_neighbor"]
-            X_reshape["SoapRadialSpectrum"] = X["SoapRadialSpectrum"].keys_to_samples(keys_to_move_to_samples)
-            X_reshape["SoapRadialSpectrum"] = X_reshape["SoapRadialSpectrum"].keys_to_properties(keys_to_move_to_properties)
+            X_moved["SoapRadialSpectrum"] = X["SoapRadialSpectrum"].keys_to_samples(keys_to_move_to_samples)
+            X_moved["SoapRadialSpectrum"] = X_moved["SoapRadialSpectrum"].keys_to_properties(keys_to_move_to_properties)
 
         if "SoapPowerSpectrum" in X.keys():
             keys_to_move_to_samples = ["species_center"]
             keys_to_move_to_properties = ["species_neighbor_1", "species_neighbor_2"]
-            X_reshape["SoapPowerSpectrum"] = X["SoapPowerSpectrum"].keys_to_samples(keys_to_move_to_samples)
-            X_reshape["SoapPowerSpectrum"] = X_reshape["SoapPowerSpectrum"].keys_to_properties(keys_to_move_to_properties)
+            X_moved["SoapPowerSpectrum"] = X["SoapPowerSpectrum"].keys_to_samples(keys_to_move_to_samples)
+            X_moved["SoapPowerSpectrum"] = X_moved["SoapPowerSpectrum"].keys_to_properties(keys_to_move_to_properties)
+        return X_moved
 
-        # aggregation
+    def _aggregate(self, X: Dict[str, TensorMap]) -> Dict[str, TensorMap]:
         if self._feature_aggregation == "sum":
-            if "Composition" in X_reshape.keys():
-                samples_names = ["center"]
-                X_reshape["Composition"] = sum_over_samples(X_reshape["Composition"], samples_names=["center"])
-            if "SoapRadialSpectrum" in X_reshape.keys():
-                samples_names = ["center", "species_center"]
-                X_reshape["SoapRadialSpectrum"] = sum_over_samples(
-                    X_reshape["SoapRadialSpectrum"], samples_names=samples_names
-                )
-            if "SoapPowerSpectrum" in X_reshape.keys():
-                samples_names = ["center", "species_center"]
-                X_reshape["SoapPowerSpectrum"] = sum_over_samples(
-                    X_reshape["SoapPowerSpectrum"], samples_names=samples_names
-                )
+            aggregation_function  = sum_over_samples
         elif self._feature_aggregation == "mean":
-            if "Composition" in X_reshape.keys():
-                samples_names = ["center"]
-                X_reshape["Composition"] = mean_over_samples(X_reshape["Composition"], samples_names=["center"])
-            if "SoapRadialSpectrum" in X_reshape.keys():
-                samples_names = ["center", "species_center"]
-                X_reshape["SoapRadialSpectrum"] = mean_over_samples(
-                    X_reshape["SoapRadialSpectrum"], samples_names=samples_names
-                )
-            if "SoapPowerSpectrum" in X_reshape.keys():
-                samples_names = ["center", "species_center"]
-                X_reshape["SoapPowerSpectrum"] = mean_over_samples(
-                    X_reshape["SoapPowerSpectrum"], samples_names=samples_names
-                )
+            aggregation_function = mean_over_samples
+        else:
+            raise ValueError("Invalid aggregation_function.") # TODO make error message nice
 
+        if "Composition" in X.keys():
+            samples_names = ["center"]
+            X["Composition"] = aggregation_function(X["Composition"], samples_names=["center"])
+        if "SoapRadialSpectrum" in X.keys():
+            samples_names = ["center", "species_center"]
+            X["SoapRadialSpectrum"] = aggregation_function(
+                X["SoapRadialSpectrum"], samples_names=samples_names
+            )
+        if "SoapPowerSpectrum" in X.keys():
+            samples_names = ["center", "species_center"]
+            X["SoapPowerSpectrum"] = aggregation_function(
+                X["SoapPowerSpectrum"], samples_names=samples_names
+            )
+        return X
+
+    def _join(self, X: Dict[str, TensorMap]) -> TensorMap:
         # joining
         # we do this to join them always in the same order
-        return join(list(X_reshape.values()), axis="properties")
+        return join(list(X.values()), axis="properties")
