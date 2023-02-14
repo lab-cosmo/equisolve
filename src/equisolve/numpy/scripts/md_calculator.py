@@ -1,22 +1,23 @@
 import ase.io
 import numpy as np
+import pickle
 
 class GenericMDCalculator:
 
-    """Generic MD driver for a equi script
+    """Generic MD driver for a equiscript
 
-    Initialize with equi script JSON and a structure template, and calculate
+    Initialize with equiscript JSON and a structure template, and calculate
     energies and forces based on position/cell updates _assuming the
     order and identity of atoms does not change_.
     """
     def __init__(
-        self, equi_script_filename, is_periodic, structure_template=None, atomic_numbers=None
+        self, script_filename, is_periodic, structure_template=None, atomic_numbers=None
     ):
-        """Initialize a equi script and structure template
+        """Initialize a equiscript and structure template
 
         Parameters
         ----------
-        equi_script_filename Filename for the equi script pickle object
+        script_filename Filename for the equiscript pickle object
         is_periodic Specify whether the simulation is periodic or not
                     This helps avoid confusion if a geometry's "periodic"
                     flags have been set improperly, which can happen e.g.
@@ -36,9 +37,9 @@ class GenericMDCalculator:
                     the atomic structure in case no structure template
                     is given
         """
-        self.model_filename = equi_script_filename
-        with open(equi_script_filename, "rb") as file:
-            self.equi_script = pickle.load(file)
+        self.model_filename = script_filename
+        with open(script_filename, "rb") as file:
+            self.script = pickle.load(file)
         # Structure initialization
         self.is_periodic = is_periodic
         if structure_template is not None:
@@ -90,8 +91,8 @@ class GenericMDCalculator:
         self.atoms.set_cell(cell_matrix)
         self.atoms.set_positions(positions)
 
-        Xi = script.compute(systems=structure, gradients=["positions"])
-        y_pred = script.forward(Xi) # implicitely done in score function
+        Xi = self.script.compute(systems=self.atoms, gradients=["positions"])
+        y_pred = self.script.forward(Xi) # implicitely done in score function
         energy = y_pred.block().values[0][0]
         forces = np.array(y_pred.block().gradient("positions").data.reshape(-1, 3))
 
