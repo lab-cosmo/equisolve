@@ -24,14 +24,14 @@ class Ridge:
 
     .. math::
 
-        w = X^T \left( X \cdot X^T + λ I \right)^{-1} \cdot y \,,
+        w = X^T \left( X \cdot X^T + α I \right)^{-1} \cdot y \,,
 
-    where :math:`X` is the training data, :math:`y` the target data and :math:`λ` the
+    where :math:`X` is the training data, :math:`y` the target data and :math:`α` is the
     regularization strength.
 
     :param parameter_keys: Parameters to perform the regression for.
-                           Examples are ``"values"``, ``"positions"`` or
-                           ``"cell"``.
+                           Examples are ``"values"``, ``"positions"``,
+                           ``"cell"`` or a combination of these.
     """
 
     def __init__(
@@ -45,7 +45,7 @@ class Ridge:
         else:
             self.parameter_keys = parameter_keys
 
-        self._coef = None
+        self._weights = None
 
     def _validate_data(self, X: TensorMap, y: Optional[TensorMap] = None) -> None:
         """Validates :class:`equistore.TensorBlock`'s for the usage in models.
@@ -141,15 +141,15 @@ class Ridge:
 
         :param X: training data
         :param y: target values
-        :param alpha: Constant :math:`λ` that multiplies the L2 term, controlling
-                      regularization strength. Values must be a non-negative floats
-                      i.e. in [0, inf). :math:`λ` can be different for each column in ``X``
+        :param alpha: Constant α that multiplies the L2 term, controlling
+                      regularization strength. Values must be non-negative floats
+                      i.e. in [0, inf). α can be different for each column in ``X``
                       to regulerize each property differently.
         :param sample_weight: sample weights
         :param rcond: Cut-off ratio for small singular values during the fit. For
                     the purposes of rank determination, singular values are treated as
                     zero if they are smaller than ``rcond`` times the largest singular
-                    value in "coefficient" matrix.
+                    value in "weightsficient" matrix.
         """
 
         if type(alpha) is float:
@@ -169,7 +169,7 @@ class Ridge:
         self._validate_data(X, y)
         self._validate_params(X, alpha, sample_weight)
 
-        coef_blocks = []
+        weights_blocks = []
         for key, X_block in X:
             y_block = y.block(key)
             alpha_block = alpha.block(key)
@@ -196,27 +196,27 @@ class Ridge:
 
             w = self._numpy_lstsq_solver(X_arr, y_arr, sw_arr, alpha_arr, rcond)
 
-            coef_block = TensorBlock(
+            weights_block = TensorBlock(
                 values=w.reshape(1, -1),
                 samples=y_block.properties,
                 components=[],
                 properties=X_block.properties,
             )
-            coef_blocks.append(coef_block)
+            weights_blocks.append(weights_block)
 
-        # convert coefs to dictionary allowing dump of an instance in a pickle file
-        self._coef = tensor_map_to_dict(TensorMap(X.keys, coef_blocks))
+        # convert weightsficients to a dictionary allowing pickle dump of an instance
+        self._weights = tensor_map_to_dict(TensorMap(X.keys, weights_blocks))
 
         return self
 
     @property
-    def coef(self) -> TensorMap:
+    def weights(self) -> TensorMap:
         """``Tensormap`` containing the weights of the provided training data."""
 
-        if self._coef is None:
+        if self._weights is None:
             raise ValueError("No weights. Call fit method first.")
 
-        return dict_to_tensor_map(self._coef)
+        return dict_to_tensor_map(self._weights)
 
     def predict(self, X: TensorMap) -> TensorMap:
         """
@@ -225,14 +225,14 @@ class Ridge:
         :param X: samples
         :returns: predicted values
         """
-        return dot(X, self.coef)
+        return dot(X, self.weights)
 
-    def score(self, X: TensorMap, y: TensorMap, parameter_keys: Union[List[str], str] = None) -> float:
-        """Return the coefficient of determination of the prediction.
+    def score(self, X: TensorMap, y: TensorMap, parameter_key: str) -> float:
+        """Return the weights of determination of the prediction.
 
         :param X: Test samples
-        :param y: True values for `X`.
-        :param parameter_keys: Parameter to score for. Examples are ``"values"``,
+        :param y: True values for ``X``.
+        :param parameter_key: Parameter to score for. Examples are ``"values"``,
                               ``"positions"`` or ``"cell"``.
 
         :returns score: :math:`RMSE` for each block in ``self.predict(X)`` with

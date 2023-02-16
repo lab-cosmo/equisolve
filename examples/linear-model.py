@@ -17,7 +17,7 @@ We first import all necessary packages.
 import ase.io
 import numpy as np
 from equistore import Labels
-from equistore.operations import ones_like, slice, sum_over_samples
+from equistore.operations import multiply, ones_like, slice, sum_over_samples
 from rascaline import SoapPowerSpectrum
 
 from equisolve.numpy.models.linear_model import Ridge
@@ -32,7 +32,7 @@ from equisolve.utils.convert import ase_to_tensormap
 # As data set we use the SHIFTML set. You can obtain the dataset used in this
 # example from our :download:`website<../../static/dataset.xyz>`.
 # We read the first 20 structures of the data set using
-# `ASE <https://wiki.fysik.dtu.dk/ase/>`.
+# `ASE <https://wiki.fysik.dtu.dk/ase/>`_.
 
 
 frames = ase.io.read("dataset.xyz", ":20")
@@ -127,17 +127,31 @@ print(y.block())
 # Construct the model
 # -------------------
 #
-# Before we fit the model we have to define our regression values.
+# We first initilize the :class:`equisolve.numpy.models.linear_model.Ridge`
+# object. A mandatory parameter are the ``parameter_keys`` determining with
+# respect to which parameters the regression or fit is
+# performed. Here, we choose a regression wrt. to ``"values"`` (energies) and
+# ``"positions"`` (forces).
+
+
+clf = Ridge(parameter_keys=["values", "positions"])
+
+# %%
 #
-# For this we create a TensorMap containing with the desired regulerizer
+# Before we fit a model we have to define our regulerizer values.
+#
+# For this we create a TensorMap containing the desired regulerizer values.
+# Here we chose a regulerizer strength of :math:`1 \cdot 10^-5`. Note that
+# without standardizing the features and values the regulerizer strength
+# depends on the system and has to be taken carefully and usually optimized.
 
 alpha = ones_like(X)
-alpha.block().values[:] *= 1e-5
+alpha = multiply(alpha, 1e-5)
 
 # %%
 #
 # So far ``alpha`` contains the same number of samples as ``X``. However,
-# the regulerizer only has to be one sample, because all samples will be
+# the regulerizer must only contain a single sample, because all samples will be
 # regulerized in the same way in a linear model.
 #
 # We remove all sample except the 0th one by using the
@@ -150,46 +164,48 @@ samples = Labels(
 
 alpha = slice(alpha, samples=samples)
 
+print(alpha)
+
 # %%
 #
 # In our regulerizer we use the same values for all properties. However,
 # :class:`equisolve.numpy.models.linear_model.Ridge` can also handle different
-# regularization for each property. You can apply a property wise regularization by
-# setting ``"values"`` of ``alpha_dict`` with an 1d array of the same length as the
-# number of properties in the training data X (here 7200)
+# regularization for each property. You can apply a property wise
+# regularization by setting ``"values"`` of ``alpha`` with an 1d array of the
+# same length as the number of properties in the training data X (here 7200).
 #
-# With a valid regulerizer object we now initilize the Ridge object.
-# ``parameter_keys`` determines with respect to which parameters the regression is
-# performed. Here, we choose a regression wrt. to ``"values"`` (energies) and
-# ``"positions"`` (forces).
-
-
-clf = Ridge(parameter_keys=["values", "positions"], alpha=alpha)
-
-# %%
-#
-# Next we create a sample weighting :class:`equistiore.TensorMap` that weights energies
-# five times more then the forces.
+# Next we create a sample weighting :class:`equistiore.TensorMap` that weights
+# energies five times more then the forces.
 
 sw = ones_like(y)
-sw.block().values[:] *= 5
+sw = multiply(sw, 5.0)
 
 # %%
 #
 # The function `equisolve.utils.dictionary_to_tensormap` create a
-# :class:`equistore.TensorMap` with the same shape as our target data ``y`` but with
-# values a defined by ``sw_dict``.
+# :class:`equistore.TensorMap` with the same shape as our target data ``y`` but
+# with values a defined by ``sw_dict``.
 
-print(sw)
+print(sw.block())
 
-# Finally we can fit the model using the sample weights defined above.
+# %%
+#
+# Finally, we can fit the model using the regulerizer and sample weights as
+# defined above.
 
-clf.fit(X, y, sample_weight=sw)
+clf.fit(X, y, alpha=alpha, sample_weight=sw)
 
+# %%
+#
+# We now predict values and calculate the root mean squre error
+# of our model using the ``score`` method.
 
-# Finally we can predict values and calculate the root mean squre error
-# of our model.
-
-clf.predict(X)
 print(f"RMSE energies = {clf.score(X, y, parameter_key='values')[0]:.3f} eV")
 print(f"RMSE forces = {clf.score(X, y, parameter_key='positions')[0]:.3f} eV/Å")
+
+# %%
+#
+# If you only want to predict values you can use the
+# :meth:`equisolve.numpy.models.linear_model.Ridge.predict` method.
+
+clf.predict(X)
