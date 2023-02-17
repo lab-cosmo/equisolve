@@ -29,9 +29,9 @@ class Ridge:
     where :math:`X` is the training data, :math:`y` the target data and :math:`α` is the
     regularization strength.
 
-    :param parameter_keys: Parameters to perform the regression for.
-                           Examples are ``"values"``, ``"positions"``,
-                           ``"cell"`` or a combination of these.
+    :param parameter_keys:
+        Parameters to perform the regression for. Examples are ``"values"``,
+        ``"positions"``, ``"cell"`` or a combination of these.
     """
 
     def __init__(
@@ -48,8 +48,10 @@ class Ridge:
     def _validate_data(self, X: TensorMap, y: Optional[TensorMap] = None) -> None:
         """Validates :class:`equistore.TensorBlock`'s for the usage in models.
 
-        :param X: training data to check
-        :param y: target data to check
+        :param X:
+            training data to check
+        :param y:
+            target data to check
         """
         if len(X.components_names) != 0:
             raise ValueError("`X` contains components")
@@ -80,8 +82,10 @@ class Ridge:
     ) -> None:
         """Check regulerizer and sample weights have are correct wrt. to``X``.
 
-        :param X: training data for reference
-        :param sample_weight: sample weights
+        :param X:
+            training data for reference
+        :param sample_weight:
+            sample weights
         """
 
         _check_maps(X, alpha, "_validate_params")
@@ -137,17 +141,20 @@ class Ridge:
     ) -> None:
         """Fit Ridge regression model to each block in X.
 
-        :param X: training data
-        :param y: target values
-        :param alpha: Constant α that multiplies the L2 term, controlling
-                      regularization strength. Values must be non-negative floats
-                      i.e. in [0, inf). α can be different for each column in ``X``
-                      to regulerize each property differently.
-        :param sample_weight: sample weights
-        :param rcond: Cut-off ratio for small singular values during the fit. For
-                    the purposes of rank determination, singular values are treated as
-                    zero if they are smaller than ``rcond`` times the largest singular
-                    value in "weightsficient" matrix.
+        :param X:
+            training data
+        :param y:
+            target values
+        :param alpha:
+            Constant α that multiplies the L2 term, controlling regularization strength.
+            Values must be non-negative floats i.e. in [0, inf). α can be different for
+            each column in ``X`` to regulerize each property differently.
+        :param sample_weight:
+            sample weights
+        :param rcond:
+            Cut-off ratio for small singular values during the fit. For the purposes of
+            rank determination, singular values are treated as zero if they are smaller
+            than ``rcond`` times the largest singular value in "weightsficient" matrix.
         """
 
         if type(alpha) is float:
@@ -220,21 +227,27 @@ class Ridge:
         """
         Predict using the linear model.
 
-        :param X: samples
-        :returns: predicted values
+        :param X:
+            samples
+        :returns:
+            predicted values
         """
         return dot(X, self.weights)
 
     def score(self, X: TensorMap, y: TensorMap, parameter_key: str) -> float:
-        """Return the weights of determination of the prediction.
+        r"""Return the weights of determination of the prediction.
 
-        :param X: Test samples
-        :param y: True values for ``X``.
-        :param parameter_key: Parameter to score for. Examples are ``"values"``,
-                              ``"positions"`` or ``"cell"``.
+        :param X:
+            Test samples
+        :param y:
+            True values for ``X``.
+        :param parameter_key:
+            Parameter to score for. Examples are ``"values"``, ``"positions"`` or
+            ``"cell"``.
 
-        :returns score: :math:`RMSE` for each block in ``self.predict(X)`` with
-                        respecy to `y`.
+        :returns score:
+            :math:`\mathrm{RMSE}` for each block in ``self.predict(X)`` with respecy to
+            `y`.
         """
         y_pred = self.predict(X)
         return rmse(y, y_pred, parameter_key)

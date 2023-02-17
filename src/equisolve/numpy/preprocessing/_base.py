@@ -8,6 +8,29 @@ from ..utils import block_to_array, dict_to_tensor_map, tensor_map_to_dict
 
 
 class StandardScaler:
+    """Standardize features by removing the mean and scaling to unit variance.
+
+    :param parameter_keys:
+        Parameters to perform the standardization for.
+        Examples are ``"values"``, ``"positions"``,
+        ``"cell"`` or a combination of these.
+    :param with_mean:
+        If ``True``, center the data before scaling. If ``False``,
+        keep the mean intact
+    :param with_std:
+        If ``True``, scale the data to unit variance. If ``False``,
+        keep the variance intact
+    :param column_wise:
+        If True, normalize each column separately. If False, normalize the whole
+        matrix with respect to its total variance.
+    :param rtol:
+        The relative tolerance for the optimization: variance is
+        considered zero when it is less than abs(mean) * rtol + atol.
+    :param atol:
+        The relative tolerance for the optimization: variance is
+        considered zero when it is less than abs(mean) * rtol + atol.
+    """
+
     def __init__(
         self,
         parameter_keys: Union[List[str], str],

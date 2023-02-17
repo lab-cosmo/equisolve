@@ -14,6 +14,7 @@ import sys
 
 import equisolve
 
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 sys.path.insert(0, os.path.abspath('../../'))
 
@@ -182,9 +183,35 @@ latex_elements = {
 
 # Configuration for intersphinx: refer to the Python standard library
 # and other packages used by MAICoS
-intersphinx_mapping = {'https://docs.python.org/3/': None,
-                       'https://docs.scipy.org/doc/scipy/': None,
-                       'https://numpy.org/doc/stable/': None,
-                       'https://lab-cosmo.github.io/equistore/latest/': None,
-                       'https://luthaf.fr/rascaline/latest/': None,
-                       }
+
+intersphinx_mapping = {
+    "ase": ("https://wiki.fysik.dtu.dk/ase/", None),
+    "rascaline": ("https://luthaf.fr/rascaline/latest/", None),
+    "equistore": ("https://lab-cosmo.github.io/equistore/latest/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
+    "python": ("https://docs.python.org/3", None),
+}
+
+# Add any paths that contain custom static files (such as style sheets) here,
+# relative to this directory. They are copied after the builtin static files,
+# so a file named "default.css" will overwrite the builtin "default.css".
+html_static_path = [os.path.join(ROOT, "docs", "static")]
+
+html_theme_options = {
+    "footer_icons": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/lab-cosmo/equisolve",
+            "html": "",
+            "class": "fa-brands fa-github fa-2x",
+        },
+    ],
+}
+
+# font-awesome logos (used in the footer)
+html_css_files = [
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/fontawesome.min.css",
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/solid.min.css",
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/brands.min.css",
+]
