@@ -6,7 +6,7 @@
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Functions for converting values into class:``equistore.TensorMap``s."""
+"""Functions for converting instances into an :class:`equistore.TensorMap`."""
 
 from typing import List
 
@@ -19,14 +19,19 @@ from equistore.block import TensorBlock
 def ase_to_tensormap(
     frames: List[ase.Atoms], energy: str = None, forces: str = None, stress: str = None
 ) -> TensorMap:
-    """Store informations from :class:``ase.Atoms`` in a class:``equistore.TensorMap``.
+    """Store informations from :class:`ase.Atoms` in a :class:`equistore.TensorMap`.
 
-    :param frames: ase.Atoms or list of ase.Atoms
-    :param energy: key for extracting energy per structure
-    :param forces: key for extracting atomic forces
-    :param stress: key for extracting stress per structure
+    :param frames:
+        ase.Atoms or list of ase.Atoms
+    :param energy:
+        key for extracting energy per structure
+    :param forces:
+        key for extracting atomic forces
+    :param stress:
+        key for extracting stress per structure
 
-    :returns: TensorMap containing the given information
+    :returns:
+        TensorMap containing the given information
     """
     if not isinstance(frames, list):
         frames = [frames]
@@ -52,25 +57,31 @@ def properties_to_tensormap(
     cell_gradients: List[np.ndarray] = None,
     is_structure_property: bool = True,
 ) -> TensorMap:
-    """Create a class:``equistore.TensorMap`` from array like properties.
+    """Create a :class:`equistore.TensorMap` from array like properties.
 
-    :param values: array like object of dimension N, for example the energies for each
-                   structure
-    :param positions_gradients: list of length N with each entry i containing an array
-                                like objects with dimension (M_i, 3), for example the
-                                negative forces for each atom for all structures)
-    :param cell_gradients: array like objects of dimension (N, 3, 3), for example the
-                           virial stress of a structure
-    :param is_structure_property: boolean that determines if values correspond to a
-                                  structure or atomic property, this property is not
-                                  implemented yet.
+    :param values:
+        array like object of dimension N, for example the energies for each structure
+    :param positions_gradients:
+        list of length N with each entry i containing an array like objects with
+        dimension (M_i, 3), for example the negative forces for each atom for all
+        structures)
+    :param cell_gradients:
+        array like objects of dimension (N, 3, 3), for example the virial stress of
+        a structure
+    :param is_structure_property:
+        boolean that determines if values correspond to a structure or atomic property,
+        this property is not implemented yet.
 
-    :raises ValueError: if the length of `values`, `positions_gradients` or
-                        `cell_gradients` is not the same.
-    :raises ValueError: if each element in `positions_gradients` does not have 3 columns
-    :raises ValueError: if each element in `cell_gradients` is not a 3x3 matrix.
+    :raises ValueError:
+        if the length of `values`, `positions_gradients` or `cell_gradients` is not the
+        same.
+    :raises ValueError:
+        if each element in `positions_gradients` does not have 3 columns
+    :raises ValueError:
+        if each element in `cell_gradients` is not a 3x3 matrix.
 
-    :returns: TensorMap containing the given properties
+    :returns:
+        TensorMap containing the given properties
     """
 
     if not (is_structure_property):

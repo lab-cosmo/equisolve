@@ -5,6 +5,8 @@
 #
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
+"""Functions for evaluating the quality of a model’s predictions."""
+
 from typing import List
 
 import numpy as np
