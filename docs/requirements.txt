@@ -1,0 +1,6 @@
+ase
+matplotlib
+furo
+rascaline @ https://github.com/luthaf/rascaline/archive/master.zip
+sphinx >=4.4
+sphinx-gallery
