@@ -6,18 +6,13 @@
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
 
-import os
-
-import ase.io
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
-from rascaline import SoapPowerSpectrum
 
 from equisolve.numpy.preprocessing import StandardScaler
 
-
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+from ..utils import random_single_block_no_components_tensor_map
 
 
 class TestStandardScaler:
@@ -25,70 +20,79 @@ class TestStandardScaler:
 
     rng = np.random.default_rng(0x122578748CFF12AD12)
     n_strucs = 5
-    frames = ase.io.read(os.path.join(ROOT, "./examples/dataset.xyz"), f":{n_strucs}")
 
-    hypers = {
-        "cutoff": 5.0,
-        "max_radial": 2,
-        "max_angular": 2,
-        "atomic_gaussian_width": 0.3,
-        "center_atom_weight": 1.0,
-        "radial_basis": {
-            "Gto": {},
-        },
-        "cutoff_function": {
-            "ShiftedCosine": {"width": 0.5},
-        },
-    }
+    X = random_single_block_no_components_tensor_map()
 
-    calculator = SoapPowerSpectrum(**hypers)
+    absolute_tolerance = 1e-14
+    relative_tolerance = 1e-14
 
-    descriptor = calculator.compute(frames, gradients=["positions"])
-    # Move all keys into properties
-    descriptor = descriptor.keys_to_properties(
-        ["species_center", "species_neighbor_1", "species_neighbor_2"]
-    )
-    # ``X`` contains a represenantion with respect to central atoms. However
-    # our energies as target data is per structure. Therefore, we convert the
-    # central atom representation into a structure wise represention by summing all
-    # properties per structure.
-    from equistore.operations import sum_over_samples
-
-    X = sum_over_samples(descriptor, ["center"])
-
-    @pytest.fixture
-    def energies(self):
-        return [i for i in self.rng.random(self.n_strucs)]
-
-    def test_standard_scaler_transform(self):
-        st = StandardScaler(["values", "positions"]).fit(self.X)
+    @pytest.mark.parametrize("with_mean", [True, False])
+    @pytest.mark.parametrize("with_std", [True, False])
+    def test_standard_scaler_transform(self, with_mean, with_std):
+        parameter_keys = ["values", "positions"]
+        st = StandardScaler(
+            parameter_keys=parameter_keys,
+            with_mean=with_mean,
+            with_std=with_std,
+            column_wise=False,
+        ).fit(self.X)
         X_t = st.transform(self.X)
 
         X_values = X_t.block().values
-        assert_allclose(np.mean(X_values, axis=0), 0, atol=1e-14, rtol=1e-14)
-        assert_allclose(
-            np.sqrt(np.sum(np.var(X_values, axis=0))), 1, atol=1e-14, rtol=1e-14
-        )
-
-        for _, X_grad in X_t.block().gradients():
-            X_grad = X_grad.data.reshape(-1, X_grad.data.shape[-1])
-            assert_allclose(np.mean(X_grad, axis=0), 0, atol=1e-14, rtol=1e-14)
+        if with_mean:
             assert_allclose(
-                np.sqrt(np.sum(np.var(X_grad, axis=0))), 1, atol=1e-14, rtol=1e-14
+                np.mean(X_values, axis=0),
+                0,
+                atol=self.absolute_tolerance,
+                rtol=self.relative_tolerance,
+            )
+        if with_std:
+            assert_allclose(
+                np.sqrt(np.sum(np.var(X_values, axis=0))),
+                1,
+                atol=self.absolute_tolerance,
+                rtol=self.relative_tolerance,
             )
 
-    def test_standard_scaler_inverse_transform(self):
-        st = StandardScaler(["values", "positions"]).fit(self.X)
+        parameter_keys.remove("values")
+        for parameter in parameter_keys:
+            X_grad = X_t.block().gradient(parameter)
+            X_grad = X_grad.data.reshape(-1, X_grad.data.shape[-1])
+            if with_mean:
+                assert_allclose(np.mean(X_grad, axis=0), 0, atol=1e-14, rtol=1e-14)
+            if with_std:
+                assert_allclose(
+                    np.sqrt(np.sum(np.var(X_grad, axis=0))),
+                    1,
+                    atol=self.absolute_tolerance,
+                    rtol=self.relative_tolerance,
+                )
+
+    @pytest.mark.parametrize("with_mean", [True, False])
+    @pytest.mark.parametrize("with_std", [True, False])
+    def test_standard_scaler_inverse_transform(self, with_mean, with_std):
+        parameter_keys = ["values", "positions"]
+        st = StandardScaler(
+            parameter_keys=parameter_keys,
+            with_mean=with_mean,
+            with_std=with_std,
+            column_wise=False,
+        ).fit(self.X)
         X_t_inv_t = st.inverse_transform(st.transform(self.X))
 
         assert_allclose(
-            self.X.block().values, X_t_inv_t.block().values, atol=1e-14, rtol=1e-14
+            self.X.block().values,
+            X_t_inv_t.block().values,
+            atol=self.absolute_tolerance,
+            rtol=self.relative_tolerance,
         )
 
-        for parameter, X_grad in self.X.block().gradients():
+        parameter_keys.remove("values")
+        for parameter in parameter_keys:
+            X_grad = self.X.block().gradient(parameter)
             assert_allclose(
                 X_grad.data,
                 X_t_inv_t.block().gradient(parameter).data,
-                atol=1e-14,
-                rtol=1e-14,
+                atol=self.absolute_tolerance,
+                rtol=self.relative_tolerance,
             )
