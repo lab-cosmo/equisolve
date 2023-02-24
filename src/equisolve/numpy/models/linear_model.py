@@ -16,6 +16,8 @@ from equistore.operations._utils import _check_blocks, _check_maps
 from ...utils.metrics import rmse
 from ..utils import block_to_array, dict_to_tensor_map, tensor_map_to_dict
 
+import scipy.linalg
+
 
 class Ridge:
     r"""Linear least squares with l2 regularization for :class:`equistore.Tensormap`'s.
@@ -119,17 +121,38 @@ class Ridge:
                     )
 
     def _numpy_lstsq_solver(self, X, y, sample_weights, alphas, rcond):
-        # Convert problem with regularization term into an equivalent
-        # problem without the regularization term
+        """Solving regularized linear least squares with :class:`numpy.linal.lstsq`.
+        
+        The functions converts the problem with regularization term into an equivalent
+        problem without the regularization term which can be applied to a solver.
+        """
+
         num_properties = X.shape[1]
 
-        regularization_all = np.hstack((sample_weights, alphas))
+        regularization_all = np.hstack((sample_weights[:, 0], alphas[0, :]))
         regularization_eff = np.diag(np.sqrt(regularization_all))
 
         X_eff = regularization_eff @ np.vstack((X, np.eye(num_properties)))
-        y_eff = regularization_eff @ np.hstack((y, np.zeros(num_properties)))
+        y_eff = regularization_eff @ np.hstack((y[:, 0], np.zeros(num_properties)))
 
         return np.linalg.lstsq(X_eff, y_eff, rcond=rcond)[0]
+
+    def _scipy_solve_solver(self, X, y, sample_weights, alphas):
+        """Solving regularized linear least squares with :class:`scipy.linal.lstsq`."""
+
+        X_eff = X / sample_weights
+        y_eff = y / sample_weights
+
+        X_eff = X.T @ X + np.diag(alphas[0, :])
+        y_eff = X.T @ y[:, 0]
+
+        # print(y_eff.shape)
+        # print(X_eff.shape)
+        # print(np.diag(alphas[0, :]).shape)
+        # print(y[:, 0].shape)
+
+        #return scipy.linalg.solve(X_eff, y_eff, assume_a="pos", overwrite_a=True).ravel()
+        return np.linalg.solve(X_eff, y_eff)
 
     def fit(
         self,
@@ -183,23 +206,24 @@ class Ridge:
             X_arr = block_to_array(X_block, self.parameter_keys)
 
             # y_arr has shape lentgth of n_targets
-            y_arr = block_to_array(y_block, self.parameter_keys)[:, 0]
+            y_arr = block_to_array(y_block, self.parameter_keys)
 
             # alpha_arr has length of n_properties
-            alpha_arr = alpha_block.values[0]
+            alpha_arr = alpha_block.values
 
             # Sample weights
             if sample_weight is not None:
                 sw_block = sample_weight.block(key)
                 # sw_arr has length of n_targets
-                sw_arr = block_to_array(sw_block, self.parameter_keys)[:, 0]
+                sw_arr = block_to_array(sw_block, self.parameter_keys)
                 assert (
                     sw_arr.shape == y_arr.shape
                 ), f"shapes = {sw_arr.shape} and {y_arr.shape}"
             else:
-                sw_arr = np.ones((len(y_arr),))
+                sw_arr = np.ones((len(y_arr), 1))
 
-            w = self._numpy_lstsq_solver(X_arr, y_arr, sw_arr, alpha_arr, rcond)
+            #w = self._numpy_lstsq_solver(X_arr, y_arr, sw_arr, alpha_arr, rcond)
+            w = self._scipy_solve_solver(X_arr, y_arr, sw_arr, alpha_arr)
 
             weights_block = TensorBlock(
                 values=w.reshape(1, -1),

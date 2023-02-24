@@ -59,9 +59,7 @@ class TestRidge:
 
     def equisolve_solver_from_numpy_arrays(self, X_arr, y_arr, alpha_arr, sw_arr=None):
         X, y, alpha, sw = self.to_equistore(X_arr, y_arr, alpha_arr, sw_arr)
-        clf = Ridge(
-            parameter_keys="values",
-        )
+        clf = Ridge(parameter_keys="values")
         clf.fit(X=X, y=y, alpha=alpha, sample_weight=sw)
         return clf
 
