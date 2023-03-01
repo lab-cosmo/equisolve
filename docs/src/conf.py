@@ -189,7 +189,6 @@ intersphinx_mapping = {
     "rascaline": ("https://luthaf.fr/rascaline/latest/", None),
     "equistore": ("https://lab-cosmo.github.io/equistore/latest/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
     "python": ("https://docs.python.org/3", None),
 }
 

@@ -9,14 +9,13 @@
 from typing import List, Optional, Union
 
 import numpy as np
+import scipy.linalg
 from equistore import Labels, TensorBlock, TensorMap
 from equistore.operations import dot, multiply, ones_like, slice
 from equistore.operations._utils import _check_blocks, _check_maps
 
 from ...utils.metrics import rmse
 from ..utils import block_to_array, dict_to_tensor_map, tensor_map_to_dict
-
-import scipy.linalg
 
 
 class Ridge:
@@ -120,49 +119,106 @@ class Ridge:
                         "properties."
                     )
 
-    def _lstsq_solver(self, X, y, sample_weights, alphas, rcond):
-        """Solving regularized linear least squares with :class:`numpy.linal.lstsq`.
-        
-        The functions converts the problem with regularization term into an equivalent
-        problem without the regularization term which can be applied to a solver.
-        """
+    def _lstsq_solver(
+        self,
+        X: TensorBlock,
+        y: TensorBlock,
+        alpha: TensorBlock,
+        sample_weight: TensorBlock,
+        rcond: float,
+    ) -> TensorBlock:
+        """A regularized solver using ``np.linalg.lstsq``."""
 
-        num_properties = X.shape[1]
+        # Convert TensorMaps into arrays for processing them with NumPy.
 
-        regularization_all = np.hstack((sample_weights[:, 0], alphas[0, :]))
+        # X_arr has shape of (n_targets, n_properties)
+        X_arr = block_to_array(X, self.parameter_keys)
+
+        # y_arr has shape lentgth of n_targets
+        y_arr = block_to_array(y, self.parameter_keys)
+
+        # sw_arr has shape of (n_samples, 1)
+        sw_arr = block_to_array(sample_weight, self.parameter_keys)
+
+        # alpha_arr has shape of (1, n_properties)
+        alpha_arr = block_to_array(alpha, ["values"])
+
+        # Flatten into 1d arrays
+        y_arr = y_arr.ravel()
+        sw_arr = sw_arr.ravel()
+        alpha_arr = alpha_arr.ravel()
+
+        # Convert problem with regularization term into an equivalent
+        # problem without the regularization term
+        num_properties = X_arr.shape[1]
+
+        regularization_all = np.hstack((sw_arr, alpha_arr))
         regularization_eff = np.diag(np.sqrt(regularization_all))
 
-        X_eff = regularization_eff @ np.vstack((X, np.eye(num_properties)))
-        y_eff = regularization_eff @ np.hstack((y[:, 0], np.zeros(num_properties)))
+        X_eff = regularization_eff @ np.vstack((X_arr, np.eye(num_properties)))
+        y_eff = regularization_eff @ np.hstack((y_arr, np.zeros(num_properties)))
 
-        return np.linalg.lstsq(X_eff, y_eff, rcond=rcond)[0]
+        w = np.linalg.lstsq(X_eff, y_eff, rcond=rcond)[0]
 
-    def _solve_solver(self, X, y, sample_weights, alphas):
-        """Solving regularized linear least squares with :class:`scipy.linal.lstsq`."""
+        weights_block = TensorBlock(
+            values=w.reshape(1, -1),
+            samples=y.properties,
+            components=[],
+            properties=X.properties,
+        )
 
-        X_eff = X / sample_weights
-        y_eff = y / sample_weights
+        return weights_block
 
-        X_eff = X.T @ X + np.diag(alphas[0, :])
-        y_eff = X.T @ y[:, 0]
+    def _solve_solver(
+        self,
+        X: TensorBlock,
+        y: TensorBlock,
+        alpha: TensorBlock,
+        sample_weight: TensorBlock,
+    ) -> TensorBlock:
+        """A regularized solver using ``scipy.linalg.lstsq``."""
 
-        # print(y_eff.shape)
-        # print(X_eff.shape)
-        # print(np.diag(alphas[0, :]).shape)
-        # print(y[:, 0].shape)
+        # Convert TensorMaps into arrays for processing them with NumPy.
 
-        return scipy.linalg.solve(X_eff, y_eff, assume_a="pos", overwrite_a=True).ravel()
+        # X_arr has shape of (n_targets, n_properties)
+        X_arr = block_to_array(X, self.parameter_keys)
+
+        # y_arr has shape lentgth of n_targets
+        y_arr = block_to_array(y, self.parameter_keys)
+
+        # sw_arr has shape of (n_samples, 1)
+        sw_arr = block_to_array(sample_weight, self.parameter_keys)
+
+        # alpha_arr has shape of (1, n_properties)
+        alpha_arr = block_to_array(alpha, ["values"])
+
+        X_eff = X_arr / sw_arr
+        y_eff = y_arr / sw_arr
+
+        X_eff = X_arr.T @ X_arr + np.diag(alpha_arr[0, :])
+        y_eff = X_arr.T @ y_arr[:, 0]
+
+        w = scipy.linalg.solve(X_eff, y_eff, assume_a="pos", overwrite_a=True).ravel()
+
+        weights_block = TensorBlock(
+            values=w.reshape(1, -1),
+            samples=y.properties,
+            components=[],
+            properties=X.properties,
+        )
+
+        return weights_block
 
     def fit(
         self,
         X: TensorMap,
         y: TensorMap,
         alpha: Union[float, TensorMap] = 1.0,
-        sample_weight: Optional[TensorMap] = None,
+        sample_weight: Union[float, TensorMap] = 1.0,
         rcond: float = 1e-13,
         solver="solve",
     ) -> None:
-        """Fit Ridge regression model to each block in X.
+        """Fit a regression model to each block in `X`.
 
         :param X:
             training data
@@ -171,13 +227,13 @@ class Ridge:
         :param alpha:
             Constant α that multiplies the L2 term, controlling regularization strength.
             Values must be non-negative floats i.e. in [0, inf). α can be different for
-            each column in ``X`` to regulerize each property differently.
+            each column in `X` to regulerize each property differently.
         :param sample_weight:
             sample weights
         :param rcond:
             Cut-off ratio for small singular values during the fit. For the purposes of
             rank determination, singular values are treated as zero if they are smaller
-            than ``rcond`` times the largest singular value in "weightsficient" matrix.
+            than `rcond` times the largest singular value in "weights" matrix.
         """
 
         if type(alpha) is float:
@@ -190,9 +246,21 @@ class Ridge:
 
             alpha_tensor = slice(alpha_tensor, samples=samples)
             alpha = multiply(alpha_tensor, alpha)
-
-        if type(alpha) is not TensorMap:
+        elif type(alpha) is not TensorMap:
             raise ValueError("alpha must either be a float or a TensorMap")
+
+        if type(sample_weight) is float:
+            sw_tensor = ones_like(X)
+
+            properties = Labels(
+                names=X.property_names,
+                values=np.zeros([1, len(X.property_names)], dtype=int),
+            )
+
+            sw_tensor = slice(sw_tensor, properties=properties)
+            sample_weight = multiply(sw_tensor, sample_weight)
+        elif type(sample_weight) is not TensorMap:
+            raise ValueError("sample_weight must either be a float or a TensorMap")
 
         self._validate_data(X, y)
         self._validate_params(X, alpha, sample_weight)
@@ -201,43 +269,20 @@ class Ridge:
         for key, X_block in X:
             y_block = y.block(key)
             alpha_block = alpha.block(key)
+            sw_block = sample_weight.block(key)
 
-            # X_arr has shape of (n_targets, n_properties)
-            X_arr = block_to_array(X_block, self.parameter_keys)
-
-            # y_arr has shape lentgth of n_targets
-            y_arr = block_to_array(y_block, self.parameter_keys)
-
-            # alpha_arr has length of n_properties
-            alpha_arr = alpha_block.values
-
-            # Sample weights
-            if sample_weight is not None:
-                sw_block = sample_weight.block(key)
-                # sw_arr has length of n_targets
-                sw_arr = block_to_array(sw_block, self.parameter_keys)
-                assert (
-                    sw_arr.shape == y_arr.shape
-                ), f"shapes = {sw_arr.shape} and {y_arr.shape}"
-            else:
-                sw_arr = np.ones((len(y_arr), 1))
-            
             if solver == "lstsq":
-                w = self._lstsq_solver(X_arr, y_arr, sw_arr, alpha_arr, rcond)
+                weights = self._lstsq_solver(
+                    X_block, y_block, alpha_block, sw_block, rcond
+                )
             elif solver == "solve":
-                w = self._solve_solver(X_arr, y_arr, sw_arr, alpha_arr)
+                weights = self._solve_solver(X_block, y_block, alpha_block, sw_block)
             else:
                 raise ValueError("Unknown solver")
 
-            weights_block = TensorBlock(
-                values=w.reshape(1, -1),
-                samples=y_block.properties,
-                components=[],
-                properties=X_block.properties,
-            )
-            weights_blocks.append(weights_block)
+            weights_blocks.append(weights)
 
-        # convert weightsficients to a dictionary allowing pickle dump of an instance
+        # convert weights to a dictionary allowing pickle dump of an instance
         self._weights = tensor_map_to_dict(TensorMap(X.keys, weights_blocks))
 
         return self

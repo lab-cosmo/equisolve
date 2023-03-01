@@ -1,12 +1,10 @@
 graft docs
+graft examples
 graft src
 
 include *.rst
 include LICENSE
 
-exclude .codacy.yaml
-exclude .codeclimate.yml
-exclude .coveragerc
 exclude .gitignore
 exclude .readthedocs.yml
 exclude tox.ini
