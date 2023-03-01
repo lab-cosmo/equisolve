@@ -120,7 +120,7 @@ class Ridge:
                         "properties."
                     )
 
-    def _numpy_lstsq_solver(self, X, y, sample_weights, alphas, rcond):
+    def _lstsq_solver(self, X, y, sample_weights, alphas, rcond):
         """Solving regularized linear least squares with :class:`numpy.linal.lstsq`.
         
         The functions converts the problem with regularization term into an equivalent
@@ -137,7 +137,7 @@ class Ridge:
 
         return np.linalg.lstsq(X_eff, y_eff, rcond=rcond)[0]
 
-    def _scipy_solve_solver(self, X, y, sample_weights, alphas):
+    def _solve_solver(self, X, y, sample_weights, alphas):
         """Solving regularized linear least squares with :class:`scipy.linal.lstsq`."""
 
         X_eff = X / sample_weights
@@ -151,8 +151,7 @@ class Ridge:
         # print(np.diag(alphas[0, :]).shape)
         # print(y[:, 0].shape)
 
-        #return scipy.linalg.solve(X_eff, y_eff, assume_a="pos", overwrite_a=True).ravel()
-        return np.linalg.solve(X_eff, y_eff)
+        return scipy.linalg.solve(X_eff, y_eff, assume_a="pos", overwrite_a=True).ravel()
 
     def fit(
         self,
@@ -161,6 +160,7 @@ class Ridge:
         alpha: Union[float, TensorMap] = 1.0,
         sample_weight: Optional[TensorMap] = None,
         rcond: float = 1e-13,
+        solver="solve",
     ) -> None:
         """Fit Ridge regression model to each block in X.
 
@@ -221,9 +221,13 @@ class Ridge:
                 ), f"shapes = {sw_arr.shape} and {y_arr.shape}"
             else:
                 sw_arr = np.ones((len(y_arr), 1))
-
-            #w = self._numpy_lstsq_solver(X_arr, y_arr, sw_arr, alpha_arr, rcond)
-            w = self._scipy_solve_solver(X_arr, y_arr, sw_arr, alpha_arr)
+            
+            if solver == "lstsq":
+                w = self._lstsq_solver(X_arr, y_arr, sw_arr, alpha_arr, rcond)
+            elif solver == "solve":
+                w = self._solve_solver(X_arr, y_arr, sw_arr, alpha_arr)
+            else:
+                raise ValueError("Unknown solver")
 
             weights_block = TensorBlock(
                 values=w.reshape(1, -1),
