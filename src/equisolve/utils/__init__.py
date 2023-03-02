@@ -8,6 +8,7 @@
 
 from .convert import ase_to_tensormap, properties_to_tensormap
 from .metrics import rmse
+from .split_data import split_data
 
 
 __all__ = [
