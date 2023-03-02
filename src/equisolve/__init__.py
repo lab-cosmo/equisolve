@@ -8,3 +8,6 @@
 
 __version__ = "0.0.0-dev"
 __authors__ = "the equisolve development team"
+
+from .numpy import *  # noqa
+from .utils import *  # noqa
