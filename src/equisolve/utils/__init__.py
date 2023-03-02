@@ -14,4 +14,5 @@ __all__ = [
     "ase_to_tensormap",
     "properties_to_tensormap",
     "rmse",
+    "split_data",
 ]
