@@ -17,16 +17,13 @@ from equisolve.numpy.utils import matrix_to_block, tensor_to_tensormap
 class TestRidge:
     """Test the class for a linear ridge regression."""
 
-    rng = np.random.default_rng(0x1225787418FBDFD12)
-
-    # Define various numbers of properties and targets.
-    # Note that for this test, the number of properties always
-    # needs to be less than the number of targets.
-    # Otherwise, the property matrix will become singualar,
-    # and the solution of the least squares problem would not be unique.
-    num_properties = np.array([91, 100, 119, 221, 256])
-    num_targets = np.array([1000, 2187])
-    means = np.array([-0.5, 0, 0.1])
+    @pytest.fixture(autouse=True)
+    def set_random_generator(self):
+        """Set the random generator to same seed before each test is run.
+        Otherwise test behaviour is dependend on the order of the tests
+        in this file and the number of parameters of the test.
+        """
+        self.rng = np.random.default_rng(0x1225787418FBDFD12)
 
     def to_equistore(self, X_arr=None, y_arr=None, alpha_arr=None, sw_arr=None):
         """Convert Ridge parameters into equistore Tensormap's with one block."""
@@ -78,6 +75,15 @@ class TestRidge:
         w_solver = least_squares_output[0]
 
         return w_solver
+
+    num_properties = np.array([91, 100, 119, 221, 256])
+    num_targets = np.array([1000, 2187])
+    means = np.array([-0.5, 0, 0.1])
+    regularizations = np.geomspace(1e-5, 1e5, 3)
+    # For the tests using the paramaters above the number of properties always
+    # needs to be less than the number of targets.
+    # Otherwise, the property matrix will become singualar,
+    # and the solution of the least squares problem would not be unique.
 
     @pytest.mark.parametrize("num_properties", num_properties)
     @pytest.mark.parametrize("num_targets", num_targets)
@@ -150,11 +156,12 @@ class TestRidge:
         # Check that the two approaches yield the same result
         assert_allclose(w_solver, w_exact, atol=1e-13, rtol=1e-10)
 
-    # Define various numbers of properties and targets.
     num_properties = np.array([119, 512])
     num_targets = np.array([87, 511])
     means = np.array([-0.5, 0, 0.1])
     regularizations = np.geomspace(1e-5, 1e5, 3)
+    # The tests using the paramaters above consider also the case where
+    # num_features > num_target
 
     @pytest.mark.parametrize("num_properties", num_properties)
     @pytest.mark.parametrize("num_targets", num_targets)
@@ -169,9 +176,10 @@ class TestRidge:
         # Define properties and target properties
         X = self.rng.normal(mean, 1, size=(num_targets, num_properties))
         w_exact = self.rng.normal(mean, 3, size=(num_properties,))
+
         y = X @ w_exact
         sample_w = np.ones((num_targets,))
-        property_w = regularization * np.zeros((num_properties,))
+        property_w = regularization * np.ones((num_properties,))
 
         # Use solver to compute weights from X and y
         ridge_class = self.equisolve_solver_from_numpy_arrays(
@@ -247,19 +255,18 @@ class TestRidge:
     @pytest.mark.parametrize("num_properties", num_properties)
     @pytest.mark.parametrize("num_targets", num_targets)
     @pytest.mark.parametrize("mean", means)
-    @pytest.mark.parametrize("regularization", regularizations)
     @pytest.mark.parametrize("scaling", np.array([1e-4, 1e3]))
     def test_consistent_weights_scaling(
-        self, num_properties, num_targets, mean, regularization, scaling
+        self, num_properties, num_targets, mean, scaling
     ):
-        """Test of multiplying alpha or the weights same factor result in the same
+        """Test of multiplying the weights same factor result in the same
         weights."""
         # Define properties and target properties
         X = self.rng.normal(mean, 1, size=(num_targets, num_properties))
         w_exact = self.rng.normal(mean, 3, size=(num_properties,))
         y = X @ w_exact
         sample_w = np.ones((num_targets,))
-        property_w = regularization * np.zeros((num_properties,))
+        property_w = np.zeros((num_properties,))
 
         # Use solver to compute weights for the original and the scaled problems
         ridge_class = self.equisolve_solver_from_numpy_arrays(
@@ -277,19 +284,18 @@ class TestRidge:
     @pytest.mark.parametrize("num_properties", num_properties)
     @pytest.mark.parametrize("num_targets", num_targets)
     @pytest.mark.parametrize("mean", means)
-    @pytest.mark.parametrize("regularization", regularizations)
     @pytest.mark.parametrize("scaling", np.array([1e-4, 1e3]))
     def test_consistent_target_scaling(
-        self, num_properties, num_targets, mean, regularization, scaling
+        self, num_properties, num_targets, mean, scaling
     ):
         """Scaling the properties, the targets and the target weights by
         the same amount leads to the identical mathematical model."""
         # Define properties and target properties
-        X = np.random.normal(mean, 1, size=(num_targets, num_properties))
-        w_exact = np.random.normal(mean, 3, size=(num_properties,))
+        X = self.rng.normal(mean, 1, size=(num_targets, num_properties))
+        w_exact = self.rng.normal(mean, 3, size=(num_properties,))
         y = X @ w_exact
         sample_w = np.ones((num_targets,))
-        property_w = regularization * np.zeros((num_properties,))
+        property_w = np.zeros((num_properties,))
 
         # Use solver to compute weights for the original and the scaled problems
         ridge_class = self.equisolve_solver_from_numpy_arrays(
@@ -366,8 +372,8 @@ class TestRidge:
         num_targets = 10
         mean = 3.3
 
-        X_arr = np.random.normal(mean, 1, size=(4 * num_targets, num_properties))
-        w_exact = np.random.normal(mean, 3, size=(num_properties,))
+        X_arr = self.rng.normal(mean, 1, size=(4 * num_targets, num_properties))
+        w_exact = self.rng.normal(mean, 3, size=(num_properties,))
 
         # Create training data
         X_values = X_arr[:num_targets]
