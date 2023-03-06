@@ -173,7 +173,7 @@ class Ridge:
         X: TensorMap,
         y: TensorMap,
         alpha: Union[float, TensorMap] = 1.0,
-        sample_weight: Union[float, TensorMap] = 1.0,
+        sample_weight: Union[float, TensorMap] = None,
         rcond: float = 1e-13,
     ) -> None:
         """Fit a regression model to each block in `X`.
@@ -187,7 +187,8 @@ class Ridge:
             Values must be non-negative floats i.e. in [0, inf). α can be different for
             each column in `X` to regulerize each property differently.
         :param sample_weight:
-            sample weights
+            Individual weights for each sample. For `None` or a float, every sample will
+            have the same weight of 1 or the float, respectively..
         :param rcond:
             Cut-off ratio for small singular values during the fit. For the purposes of
             rank determination, singular values are treated as zero if they are smaller
@@ -207,18 +208,12 @@ class Ridge:
         elif type(alpha) is not TensorMap:
             raise ValueError("alpha must either be a float or a TensorMap")
 
-        if type(sample_weight) is float:
-            sw_tensor = ones_like(X)
-
-            properties = Labels(
-                names=X.property_names,
-                values=np.zeros([1, len(X.property_names)], dtype=int),
-            )
-
-            sw_tensor = slice(sw_tensor, properties=properties)
-            sample_weight = multiply(sw_tensor, sample_weight)
+        if sample_weight is None:
+            sample_weight = ones_like(y)
+        elif type(sample_weight) is float:
+            sample_weight = multiply(ones_like(y), sample_weight)
         elif type(sample_weight) is not TensorMap:
-            raise ValueError("sample_weight must either be a float or a TensorMap")
+            raise ValueError("sample_weight must either be a float or a TensorMap.")
 
         self._validate_data(X, y)
         self._validate_params(X, alpha, sample_weight)
