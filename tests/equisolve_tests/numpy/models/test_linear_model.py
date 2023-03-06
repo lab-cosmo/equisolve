@@ -79,26 +79,25 @@ class TestRidge:
 
         return w_solver
 
-    @pytest.mark.parametrize("num_properties", num_properties)
-    @pytest.mark.parametrize("num_targets", num_targets)
-    def test_ridge(self, num_properties, num_targets):
-        """Test if ridge is working and all shapes are converted correctly.
+    @pytest.mark.parametrize("alpha", [0.0, 1.0])
+    @pytest.mark.parametrize("sample_weight", [None, 1.0])
+    def test_ridge(self, alpha, sample_weight):
+        """Test if ridge is working.
 
         Test is performed for two blocks.
         """
+        num_targets = 50
+        num_properties = 5
+
         # Create input values
         X_arr = self.rng.random([2, num_targets, num_properties])
         y_arr = self.rng.random([2, num_targets, 1])
-        alpha_arr = np.ones([2, 1, num_properties])
-        sw_arr = np.ones([2, num_targets, 1])
 
         X = tensor_to_tensormap(X_arr)
         y = tensor_to_tensormap(y_arr)
-        alpha = tensor_to_tensormap(alpha_arr)
-        sw = tensor_to_tensormap(sw_arr)
 
         clf = Ridge(parameter_keys="values")
-        clf.fit(X=X, y=y, alpha=alpha, sample_weight=sw)
+        clf.fit(X=X, y=y, alpha=alpha, sample_weight=sample_weight)
 
         assert len(clf.weights) == 2
         assert clf.weights.block(0).values.shape[1] == num_properties
@@ -115,15 +114,13 @@ class TestRidge:
 
         X_arr = self.rng.random([num_blocks, num_targets, num_properties])
         y_arr = self.rng.random([num_blocks, num_targets, 1])
-        alpha_arr = np.ones([num_blocks, 1, num_properties])
 
         X = tensor_to_tensormap(X_arr)
         y = tensor_to_tensormap(y_arr)
-        alpha = tensor_to_tensormap(alpha_arr)
 
         clf = Ridge(parameter_keys="values")
-        clf.fit(X=X, y=y, alpha=alpha)
-        clf.fit(X=X, y=y, alpha=alpha)
+        clf.fit(X=X, y=y, alpha=1.0)
+        clf.fit(X=X, y=y, alpha=1.0)
 
         assert len(clf.weights) == num_blocks
 
