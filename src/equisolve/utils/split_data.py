@@ -13,7 +13,7 @@ from typing import List, Optional, Tuple, Union
 
 import equistore
 import numpy as np
-from equistore import Labels, TensorBlock, TensorMap
+from equistore import Labels, TensorMap
 
 
 def split_data(
@@ -178,7 +178,10 @@ def split_data(
         # Inspect the grouped structure indices
         grouped_labels
         >>> [
-            Labels([(3,), (7,), (1,), (8,), (0,), (9,), (2,)], dtype=[('structure', '<i4')]),
+            Labels(
+                [(3,), (7,), (1,), (8,), (0,), (9,), (2,)],
+                dtype=[('structure', '<i4')]
+            ),
             Labels([(4,), (6,)], dtype=[('structure', '<i4')]),
             Labels([(5,)], dtype=[('structure', '<i4')]),
         ]
@@ -204,9 +207,9 @@ def split_data(
     n_indices = len(unique_idxs)
     if n_indices < n_groups:
         raise ValueError(
-            f"the number of groups specified ({n_groups}) is greater than the number of "
-            + f" unique metadata indices ({n_indices}) for the chosen axis {axis} and"
-            + f" names {names}: {unique_idxs}"
+            f"the number of groups specified ({n_groups}) is greater than the"
+            + f" number of unique metadata indices ({n_indices}) for the"
+            + f" chosen axis {axis} and names {names}: {unique_idxs}"
         )
 
     # Get group sizes
@@ -327,7 +330,7 @@ def _group_indices(indices: Labels, group_sizes: List[int]) -> Labels:
     # Group the indices
     grouped_labels = []
     prev_size = 0
-    for i, size in enumerate(group_sizes):
+    for size in group_sizes:
         grouped_labels.append(indices[prev_size : prev_size + size])
         prev_size += size
 
@@ -349,7 +352,8 @@ def _check_labels_equivalent(
         test_label = labels_list[label_i]
         if not np.array_equal(ref_labels, test_label):
             raise ValueError(
-                f"Labels objects in `labels_list` are not equivalent: {ref_labels} != {test_label}"
+                "Labels objects in `labels_list` are not equivalent:"
+                + f" {ref_labels} != {test_label}"
             )
 
 
@@ -371,7 +375,8 @@ def _check_args(
     for tensor in tensors:
         if not isinstance(tensor, TensorMap):
             raise TypeError(
-                f"`tensors` must be a list of equistore `TensorMap`, got {type(tensors)}"
+                "`tensors` must be a list of equistore `TensorMap`,"
+                + f" got {type(tensors)}"
             )
     # Check axis
     if not isinstance(axis, str):
@@ -402,7 +407,8 @@ def _check_args(
     if group_sizes is not None:
         if not isinstance(group_sizes, list):
             raise TypeError(
-                f"`group_sizes` must be passed as a list of float or int, got {type(group_sizes)}"
+                "`group_sizes` must be passed as a list of float or int,"
+                + f" got {type(group_sizes)}"
             )
         if len(group_sizes) != n_groups:
             raise ValueError(
@@ -412,11 +418,13 @@ def _check_args(
         for size in group_sizes:
             if not isinstance(size, (int, float)):
                 raise TypeError(
-                    f"`group_sizes` must be passed as a list of float or int, got {type(group_sizes)}"
+                    "`group_sizes` must be passed as a list of float or int,"
+                    + f" got {type(group_sizes)}"
                 )
             if not size > 0:
                 raise ValueError(
-                    f"all elements of `group_sizes` must be greater than 0, got {group_sizes}"
+                    "all elements of `group_sizes` must be greater than 0,"
+                    + f" got {group_sizes}"
                 )
         if np.all([isinstance(size, float) for size in group_sizes]):
             if np.sum(group_sizes) > 1:

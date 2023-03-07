@@ -10,8 +10,8 @@ from typing import List
 import equistore
 import numpy as np
 import pytest
-from equistore import Labels, TensorBlock, TensorMap, io
-from numpy.testing import assert_allclose, assert_equal
+from equistore import Labels, TensorBlock, TensorMap
+from numpy.testing import assert_equal
 
 from equisolve.utils import split_data
 
@@ -399,7 +399,7 @@ class TestSplitData:
         """
         # Get the parameterized TensorMap
         test_tensor_map = request.getfixturevalue(test_tensor_map)
-        samples_idxs = np.array([0, 1, 2, 3, 4, 5, 6, 8])
+        # There are 8 unique samples indices - [0, 1, 2, 3, 4, 5, 6, 8]
         target_grouped_labels = [
             Labels(
                 names=["samples"],
@@ -446,7 +446,7 @@ class TestSplitData:
         """
         # Get the parameterized TensorMap
         test_tensor_map = request.getfixturevalue(test_tensor_map)
-        properties_idxs = np.array([0, 3, 4, 5])
+        # There are 4 unique properties indices - [0, 3, 4, 5]
         target_grouped_labels = [
             Labels(
                 names=["properties"],
@@ -491,8 +491,7 @@ class TestSplitData:
         """
         # Get the parameterized TensorMap
         test_tensor_map = request.getfixturevalue(test_tensor_map)
-        # There are 8 unique structure idxs in total
-        samples_idxs = np.array([0, 1, 2, 3, 4, 5, 6, 8])
+        # There are 8 unique structure idxs in total: [0, 1, 2, 3, 4, 5, 6, 8]
         # Split only the first 7 of these
         target_grouped_labels = [
             Labels(
@@ -538,8 +537,7 @@ class TestSplitData:
         """
         # Get the parameterized TensorMap
         test_tensor_map = request.getfixturevalue(test_tensor_map)
-        # There are 8 unique structure idxs in total
-        samples_idxs = np.array([0, 1, 2, 3, 4, 5, 6, 8])
+        # There are 8 unique structure idxs in total: [0, 1, 2, 3, 4, 5, 6, 8]
         # Split only the first 7 of these
         target_grouped_labels = [
             Labels(
@@ -727,7 +725,8 @@ class TestSplitDataErrors:
             )
         assert (
             str(e.value)
-            == f"`group_sizes` must be passed as a list of float or int, got {type(group_sizes)}"
+            == "`group_sizes` must be passed as a list of float or int,"
+            + f" got {type(group_sizes)}"
         )
         # Passing group_sizes not as a list of int or float
         with pytest.raises(TypeError) as e:
@@ -741,7 +740,8 @@ class TestSplitDataErrors:
             )
         assert (
             str(e.value)
-            == f"`group_sizes` must be passed as a list of float or int, got {type(group_sizes)}"
+            == "`group_sizes` must be passed as a list of float or int,"
+            + f" got {type(group_sizes)}"
         )
         # Passing group_sizes as a list of negative int or float
         with pytest.raises(ValueError) as e:
@@ -755,7 +755,8 @@ class TestSplitDataErrors:
             )
         assert (
             str(e.value)
-            == f"all elements of `group_sizes` must be greater than 0, got {group_sizes}"
+            == "all elements of `group_sizes` must be greater than 0,"
+            + f" got {group_sizes}"
         )
         # Passing group_sizes as a list of float whose sum is > 1
         with pytest.raises(ValueError) as e:
@@ -788,8 +789,8 @@ class TestSplitDataErrors:
         )
         assert (
             str(e.value)
-            == f"the sum of the absolute group sizes ({sum(group_sizes)}) is greater than "
-            + f"the number of unique metadata indices ({4}) for the chosen "
+            == f"the sum of the absolute group sizes ({sum(group_sizes)}) is greater"
+            + f" than the number of unique metadata indices ({4}) for the chosen "
             + f"axis {'properties'} and names {['properties']}: {unique_idxs}"
         )
         # Passing group_sizes as a list of a single int which is greater than
@@ -808,8 +809,8 @@ class TestSplitDataErrors:
         )
         assert (
             str(e.value)
-            == f"the sum of the absolute group sizes ({sum(group_sizes)}) is greater than "
-            + f"the number of unique metadata indices ({4}) for the chosen "
+            == f"the sum of the absolute group sizes ({sum(group_sizes)}) is greater"
+            + f" than the number of unique metadata indices ({4}) for the chosen "
             + f"axis {'properties'} and names {['properties']}: {unique_idxs}"
         )
 
