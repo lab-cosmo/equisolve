@@ -14,19 +14,31 @@ from equisolve.numpy.models import Ridge
 from equisolve.numpy.utils import matrix_to_block, tensor_to_tensormap
 
 
+def numpy_solver(X, y, sample_weights, regularizations):
+    _, num_properties = X.shape
+
+    # Convert problem with regularization term into an equivalent
+    # problem without the regularization term
+    regularization_all = np.hstack((sample_weights, regularizations))
+    regularization_eff = np.diag(np.sqrt(regularization_all))
+    X_eff = regularization_eff @ np.vstack((X, np.eye(num_properties)))
+    y_eff = regularization_eff @ np.hstack((y, np.zeros(num_properties)))
+    least_squares_output = np.linalg.lstsq(X_eff, y_eff, rcond=1e-13)
+    w_solver = least_squares_output[0]
+
+    return w_solver
+
+
 class TestRidge:
     """Test the class for a linear ridge regression."""
 
-    rng = np.random.default_rng(0x1225787418FBDFD12)
-
-    # Define various numbers of properties and targets.
-    # Note that for this test, the number of properties always
-    # needs to be less than the number of targets.
-    # Otherwise, the property matrix will become singualar,
-    # and the solution of the least squares problem would not be unique.
-    num_properties = np.array([91, 100, 119, 221, 256])
-    num_targets = np.array([1000, 2187])
-    means = np.array([-0.5, 0, 0.1])
+    @pytest.fixture(autouse=True)
+    def set_random_generator(self):
+        """Set the random generator to same seed before each test is run.
+        Otherwise test behaviour is dependend on the order of the tests
+        in this file and the number of parameters of the test.
+        """
+        self.rng = np.random.default_rng(0x1225787418FBDFD12)
 
     def to_equistore(self, X_arr=None, y_arr=None, alpha_arr=None, sw_arr=None):
         """Convert Ridge parameters into equistore Tensormap's with one block."""
@@ -65,19 +77,14 @@ class TestRidge:
         clf.fit(X=X, y=y, alpha=alpha, sample_weight=sw)
         return clf
 
-    def numpy_solver(self, X, y, sample_weights, regularizations):
-        _, num_properties = X.shape
-
-        # Convert problem with regularization term into an equivalent
-        # problem without the regularization term
-        regularization_all = np.hstack((sample_weights, regularizations))
-        regularization_eff = np.diag(np.sqrt(regularization_all))
-        X_eff = regularization_eff @ np.vstack((X, np.eye(num_properties)))
-        y_eff = regularization_eff @ np.hstack((y, np.zeros(num_properties)))
-        least_squares_output = np.linalg.lstsq(X_eff, y_eff, rcond=1e-13)
-        w_solver = least_squares_output[0]
-
-        return w_solver
+    num_properties = np.array([91, 100, 119, 221, 256])
+    num_targets = np.array([1000, 2187])
+    means = np.array([-0.5, 0, 0.1])
+    regularizations = np.geomspace(1e-5, 1e5, 3)
+    # For the tests using the paramaters above the number of properties always
+    # needs to be less than the number of targets.
+    # Otherwise, the property matrix will become singualar,
+    # and the solution of the least squares problem would not be unique.
 
     @pytest.mark.parametrize("alpha", [0.0, 1.0])
     @pytest.mark.parametrize("sample_weight", [None, 1.0])
@@ -129,7 +136,8 @@ class TestRidge:
     @pytest.mark.parametrize("mean", means)
     def test_exact_no_regularization(self, num_properties, num_targets, mean):
         """Test that the weights predicted from the ridge regression
-        solver match with the exact results (no regularization)."""
+        solver match with the exact results (no regularization).
+        """
 
         # Define properties and target properties
         X = self.rng.normal(mean, 1, size=(num_targets, num_properties))
@@ -145,19 +153,46 @@ class TestRidge:
         w_solver = ridge_class.weights.block().values[0, :]
 
         # Check that the two approaches yield the same result
-        assert_allclose(w_solver, w_exact, atol=1e-13, rtol=1e-10)
+        assert_allclose(w_solver, w_exact, atol=1e-15, rtol=1e-10)
 
-    # Define various numbers of properties and targets.
-    num_properties = np.array([119, 512])
-    num_targets = np.array([87, 511])
-    means = np.array([-0.5, 0, 0.1])
-    regularizations = np.geomspace(1e-5, 1e5, 3)
+    @pytest.mark.parametrize("num_properties", [2, 4, 6])
+    @pytest.mark.parametrize("num_targets", num_targets)
+    @pytest.mark.parametrize("mean", means)
+    def test_high_accuracy_ref_numpy_solver_regularization(
+        self, num_properties, num_targets, mean
+    ):
+        """Test that the weights predicted from the ridge regression
+        solver match with the exact results (regularization).
+        As a benchmark, we use an explicit (purely numpy) solver of the
+        regularized regression problem.
+        We can only assume high accuracy for very small number of properties.
+        Because the numerical inaccuracies vary too much between solvers.
+        """
+
+        # Define properties and target properties
+        X = self.rng.normal(mean, 1, size=(num_targets, num_properties))
+        w_exact = self.rng.normal(mean, 3, size=(num_properties,))
+        y = X @ w_exact
+        sample_w = np.ones((num_targets,))
+        property_w = np.zeros((num_properties,))
+
+        # Use solver to compute weights from X and y
+        ridge_class = self.equisolve_solver_from_numpy_arrays(
+            X, y, property_w, sample_w
+        )
+        w_solver = ridge_class.weights.block().values[0, :]
+        w_ref = numpy_solver(X, y, sample_w, property_w)
+
+        # Check that the two approaches yield the same result
+        assert_allclose(w_solver, w_ref, atol=1e-15, rtol=1e-10)
 
     @pytest.mark.parametrize("num_properties", num_properties)
     @pytest.mark.parametrize("num_targets", num_targets)
     @pytest.mark.parametrize("mean", means)
     @pytest.mark.parametrize("regularization", regularizations)
-    def test_exact(self, num_properties, num_targets, mean, regularization):
+    def test_approx_ref_numpy_solver_regularization_1(
+        self, num_properties, num_targets, mean, regularization
+    ):
         """Test that the weights predicted from the ridge regression
         solver match with the exact results (with regularization).
         As a benchmark, we use an explicit (purely numpy) solver of the
@@ -166,19 +201,88 @@ class TestRidge:
         # Define properties and target properties
         X = self.rng.normal(mean, 1, size=(num_targets, num_properties))
         w_exact = self.rng.normal(mean, 3, size=(num_properties,))
+        # to obtain a low rank solution wrt. to number of properties
+
         y = X @ w_exact
         sample_w = np.ones((num_targets,))
-        property_w = regularization * np.zeros((num_properties,))
+        property_w = regularization * np.ones((num_properties,))
 
         # Use solver to compute weights from X and y
         ridge_class = self.equisolve_solver_from_numpy_arrays(
             X, y, property_w, sample_w
         )
         w_solver = ridge_class.weights.block().values[0, :]
-        w_exact_with_regularization = self.numpy_solver(X, y, sample_w, property_w)
+        w_ref = numpy_solver(X, y, sample_w, property_w)
 
         # Check that the two approaches yield the same result
-        assert_allclose(w_solver, w_exact_with_regularization, atol=1e-15, rtol=1e-10)
+        assert_allclose(w_solver, w_ref, atol=1e-13, rtol=1e-8)
+
+    num_properties = np.array([119, 512])
+    num_targets = np.array([87, 511])
+    means = np.array([-0.5, 0, 0.1])
+    regularizations = np.geomspace(1e-5, 1e5, 3)
+    # The tests using the paramaters above consider also the case where
+    # num_features > num_target
+
+    @pytest.mark.parametrize("num_properties", num_properties)
+    @pytest.mark.parametrize("num_targets", num_targets)
+    @pytest.mark.parametrize("mean", means)
+    @pytest.mark.parametrize("regularization", regularizations)
+    def test_approx_ref_numpy_solver_regularization_2(
+        self, num_properties, num_targets, mean, regularization
+    ):
+        """Test that the weights predicted from the ridge regression
+        solver match with the exact results (with regularization).
+        As a benchmark, we use an explicit (purely numpy) solver of the
+        regularized regression problem.
+        """
+        # Define properties and target properties
+        X = self.rng.normal(mean, 1, size=(num_targets, num_properties))
+        w_exact = self.rng.normal(mean, 3, size=(num_properties,))
+        # to obtain a low rank solution wrt. to number of properties
+
+        y = X @ w_exact
+        sample_w = np.ones((num_targets,))
+        property_w = regularization * np.ones((num_properties,))
+
+        # Use solver to compute weights from X and y
+        ridge_class = self.equisolve_solver_from_numpy_arrays(
+            X, y, property_w, sample_w
+        )
+        w_solver = ridge_class.weights.block().values[0, :]
+        w_ref = numpy_solver(X, y, sample_w, property_w)
+
+        # Check that the two approaches yield the same result
+        assert_allclose(w_solver, w_ref, atol=1e-13, rtol=1e-8)
+
+    @pytest.mark.parametrize("num_properties", num_properties)
+    @pytest.mark.parametrize("num_targets", num_targets)
+    @pytest.mark.parametrize("mean", means)
+    def test_exact_low_rank_no_regularization(self, num_properties, num_targets, mean):
+        """Test that the weights predicted from the ridge regression
+        solver match with the exact results (no regularization).
+        """
+        # Define properties and target properties
+        X = self.rng.normal(mean, 1, size=(num_targets, num_properties))
+        # by reducing the rank to much smaller subset an exact solution can
+        # still obtained of y, even if num_properties > num_targets
+        low_rank = min(num_targets // 4, num_properties // 4)
+        X[:, low_rank:] = 0
+        w_exact = self.rng.normal(mean, 3, size=(num_properties,))
+        w_exact[low_rank:] = 0
+
+        y = X @ w_exact
+        sample_w = np.ones((num_targets,))
+        property_w = np.zeros((num_properties,))
+
+        # Use solver to compute weights from X and y
+        ridge_class = self.equisolve_solver_from_numpy_arrays(
+            X, y, property_w, sample_w
+        )
+        w_solver = ridge_class.weights.block().values[0, :]
+
+        # Check that the two approaches yield the same result
+        assert_allclose(w_solver, w_exact, atol=1e-15, rtol=1e-10)
 
     @pytest.mark.parametrize("num_properties", num_properties)
     @pytest.mark.parametrize("num_targets", num_targets)
@@ -239,24 +343,23 @@ class TestRidge:
         w_zeros = np.zeros((num_properties,))
 
         # Check that the two approaches yield the same result
-        assert_allclose(w_solver, w_zeros, atol=1e-12, rtol=1e-10)
+        assert_allclose(w_solver, w_zeros, atol=1e-15, rtol=1e-10)
 
     @pytest.mark.parametrize("num_properties", num_properties)
     @pytest.mark.parametrize("num_targets", num_targets)
     @pytest.mark.parametrize("mean", means)
-    @pytest.mark.parametrize("regularization", regularizations)
     @pytest.mark.parametrize("scaling", np.array([1e-4, 1e3]))
     def test_consistent_weights_scaling(
-        self, num_properties, num_targets, mean, regularization, scaling
+        self, num_properties, num_targets, mean, scaling
     ):
-        """Test of multiplying alpha or the weights same factor result in the same
+        """Test of multiplying the weights same factor result in the same
         weights."""
         # Define properties and target properties
         X = self.rng.normal(mean, 1, size=(num_targets, num_properties))
         w_exact = self.rng.normal(mean, 3, size=(num_properties,))
         y = X @ w_exact
         sample_w = np.ones((num_targets,))
-        property_w = regularization * np.zeros((num_properties,))
+        property_w = np.zeros((num_properties,))
 
         # Use solver to compute weights for the original and the scaled problems
         ridge_class = self.equisolve_solver_from_numpy_arrays(
@@ -269,24 +372,23 @@ class TestRidge:
         w_scaled = ridge_class_scaled.weights.block().values[0, :]
 
         # Check that the two approaches yield the same result
-        assert_allclose(w_scaled, w_ref, atol=1e-15, rtol=1e-8)
+        assert_allclose(w_scaled, w_ref, atol=1e-13, rtol=1e-8)
 
     @pytest.mark.parametrize("num_properties", num_properties)
     @pytest.mark.parametrize("num_targets", num_targets)
     @pytest.mark.parametrize("mean", means)
-    @pytest.mark.parametrize("regularization", regularizations)
     @pytest.mark.parametrize("scaling", np.array([1e-4, 1e3]))
     def test_consistent_target_scaling(
-        self, num_properties, num_targets, mean, regularization, scaling
+        self, num_properties, num_targets, mean, scaling
     ):
         """Scaling the properties, the targets and the target weights by
         the same amount leads to the identical mathematical model."""
         # Define properties and target properties
-        X = np.random.normal(mean, 1, size=(num_targets, num_properties))
-        w_exact = np.random.normal(mean, 3, size=(num_properties,))
+        X = self.rng.normal(mean, 1, size=(num_targets, num_properties))
+        w_exact = self.rng.normal(mean, 3, size=(num_properties,))
         y = X @ w_exact
         sample_w = np.ones((num_targets,))
-        property_w = regularization * np.zeros((num_properties,))
+        property_w = np.zeros((num_properties,))
 
         # Use solver to compute weights for the original and the scaled problems
         ridge_class = self.equisolve_solver_from_numpy_arrays(
@@ -299,7 +401,7 @@ class TestRidge:
         w_scaled = ridge_class_scaled.weights.block().values[0, :]
 
         # Check that the two approaches yield the same result
-        assert_allclose(w_scaled, w_ref, atol=1e-11, rtol=1e-8)
+        assert_allclose(w_scaled, w_ref, atol=1e-13, rtol=1e-8)
 
     def test_stability(self):
         """Test numerical stability of the solver."""
@@ -363,8 +465,8 @@ class TestRidge:
         num_targets = 10
         mean = 3.3
 
-        X_arr = np.random.normal(mean, 1, size=(4 * num_targets, num_properties))
-        w_exact = np.random.normal(mean, 3, size=(num_properties,))
+        X_arr = self.rng.normal(mean, 1, size=(4 * num_targets, num_properties))
+        w_exact = self.rng.normal(mean, 3, size=(num_properties,))
 
         # Create training data
         X_values = X_arr[:num_targets]
@@ -412,7 +514,7 @@ class TestRidge:
         clf.fit(X=X, y=y, alpha=alpha)
 
         assert_allclose(
-            clf.weights.block().values, w_exact.reshape(1, -1), atol=1e-15, rtol=1e-8
+            clf.weights.block().values, w_exact.reshape(1, -1), atol=1e-15, rtol=1e-10
         )
 
         # Test prediction
