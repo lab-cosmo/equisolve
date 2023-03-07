@@ -229,17 +229,8 @@ def split_data(
 
     # Split each of the input TensorMaps
     split_tensors = []
-    for i, tensor in enumerate(tensors):
+    for tensor in tensors:
         split_tensors.append(equistore.split(tensor, axis, grouped_labels))
-
-    # Check the indices of the split tensors. the jth TensorMap in every list of
-    # split tensors should have equivalent unique indices.
-    for j in range(len(split_tensors[0])):
-        unq_idxs_list = [
-            equistore.unique_metadata(split_tensors[i][j], axis, names)
-            for i in range(len(split_tensors))
-        ]
-        _check_labels_equivalent(unq_idxs_list)
 
     return split_tensors, grouped_labels
 
