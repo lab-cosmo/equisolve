@@ -9,10 +9,10 @@
 Module for splitting lists of :py:class:`TensorMap` objects into multiple
 :py:class:`TensorMap` objects along a given axis.
 """
-from typing import List, Union, Optional, Tuple
-import numpy as np
+from typing import List, Optional, Tuple, Union
 
 import equistore
+import numpy as np
 from equistore import Labels, TensorBlock, TensorMap
 
 
@@ -427,4 +427,6 @@ def _check_args(
     # Check random_seed
     if random_seed is not None:
         if not isinstance(random_seed, int):
-            raise TypeError(f"`random_seed` must be passed as an `int`, got {type(random_seed)}")
+            raise TypeError(
+                f"`random_seed` must be passed as an `int`, got {type(random_seed)}"
+            )

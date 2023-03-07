@@ -7,12 +7,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from typing import List
 
-import numpy as np
-from numpy.testing import assert_allclose, assert_equal
-import pytest
-
 import equistore
-from equistore import io, Labels, TensorBlock, TensorMap
+import numpy as np
+import pytest
+from equistore import Labels, TensorBlock, TensorMap, io
+from numpy.testing import assert_allclose, assert_equal
+
 from equisolve.utils import split_data
 
 
@@ -529,13 +529,12 @@ class TestSplitData:
         for i, j in zip(split_tensors_1[0], split_tensors_2[0]):
             assert equistore.equal(i, j)
 
-
     def test_split_data_unequal_groups(self, test_tensor_map, request):
         """
         Tests that splitting data into equal groups using only the `n_groups`
         splits as expected when the number of unique indices is not divisible
         by `n_groups`. In this case, there are 8 unique structure idxs in the
-        test tensor maps, 
+        test tensor maps,
         """
         # Get the parameterized TensorMap
         test_tensor_map = request.getfixturevalue(test_tensor_map)
