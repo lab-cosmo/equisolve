@@ -54,8 +54,8 @@ def split_data(
     :param axis: a :py:class:`str` equal to either "samples" or "properties".
         This is the axis along which the input :py:class:`TensorMap` objects
         will be split.
-    :param names: a `list` of :py:class:`str` indicating the samples/properties
-        names by which the `tensors` will be split.
+    :param names: a :py:class:`list` of :py:class:`str` indicating the
+        samples/properties names by which the `tensors` will be split.
     :param n_groups: an :py:class:`int` indicating how many new
         :py:class:`TensorMap` objects each of the tensors passed in `tensors`
         will be split into. If `group_sizes` is none (default), `n_groups` is
@@ -78,7 +78,7 @@ def split_data(
         this value.
 
     :return split_tensors: :py:class:`list` of :py:class:`list` of
-        :py:class:`TensorMap`. The ``i``th element in the list contains
+        :py:class:`TensorMap`. The ``i`` th element in the list contains
         `n_groups` :py:class:`TensorMap` objects corresponding to the split ith
         :py:class:`TensorMap` of the input list `tensors`.
     :return grouped_labels: list of :py:class:`Labels` corresponding to the
