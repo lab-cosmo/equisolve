@@ -22,26 +22,26 @@ def split_data(
     names: Union[List[str], str],
     n_groups: int,
     group_sizes: Optional[Union[List[int], List[float]]] = None,
-    random_seed: Optional[int] = None,
+    seed: Optional[int] = None,
 ) -> Tuple[List[List[TensorMap]], List[Labels]]:
     """
     Splits a list of :py:class:`TensorMap` objects into multiple
     :py:class:`TensorMap` objects along a given axis.
 
     For either the "samples" or "properties" `axis`, the unique indices for the
-    specified metadata `name` are found. If `random_seed` is set, the indices
-    are shuffled. Then, they are divided into `n_groups`, where the sizes of the
+    specified metadata `name` are found. If `seed` is set, the indices are
+    shuffled. Then, they are divided into `n_groups`, where the sizes of the
     groups are specified by the `group_sizes` argument.
 
     These grouped indices are then used to split the list of input tensors. The
     split tensors, along with the grouped labels, are returned. The tensors are
     returned as a list of list of :py:class:`TensorMap` objects.
 
-    Each list in the returned list of list corresponds to the split
-    :py:class`TensorMap` at the same position in the input `tensors` list. Each
-    nested list contains :py:class:`TensorMap` objects that share no common
-    indices for the specified `axis` and `names`. However, the metadata on all
-    other axes (including the keys) will be equivalent.
+    Each list in the returned :py:class:`list` of :py:class:`list` corresponds
+    to the split :py:class`TensorMap` at the same position in the input
+    `tensors` list. Each nested list contains :py:class:`TensorMap` objects that
+    share no common indices for the specified `axis` and `names`. However, the
+    metadata on all other axes (including the keys) will be equivalent.
 
     The passed list of :py:class:`TensorMap` objects in `tensors` must have the
     same set of unique indices for the specified `axis` and `names`. For
@@ -51,7 +51,7 @@ def split_data(
 
     :param tensors: input `list` of :py:class:`TensorMap` objects, each of which
         will be split into `n_groups` new :py:class:`TensorMap` objects.
-    :param axis: a :py:class:`str` equal to either "samples or "properties".
+    :param axis: a :py:class:`str` equal to either "samples" or "properties".
         This is the axis along which the input :py:class:`TensorMap` objects
         will be split.
     :param names: a `list` of :py:class:`str` indicating the samples/properties
@@ -62,24 +62,25 @@ def split_data(
         used to split the data into ``n`` evenly sized groups according to the
         unique metadata for the specified `axis` and `names`, to the nearest
         integer.
-    :param group_sizes: an ordered `list` of `float` the group sizes to split
-        each input TensorMap into. A list of int will be interpreted as an
-        indication of the absolute group sizes, whereas a list of float as
-        indicating the relative sizes. For the former case, the sum of this list
-        must be <= the total number of unique indices present in the input
-        `tensors` for the chosen `axis` and `names`. In the latter, the sum of
-        this list must be <= 1.
-    :param random_seed: an int that seeds the numpy random number generator.
-        Used to control shuffling of the unique indices, which dictate the data
-        that ends up in each of the split output tensors. If None, no shuffling
-        of the indices occurs. If -1, shuffling occurs but with no random seed
-        set. If an integer != -1, shuffling is executed but with a random seed
-        set to this value.
+    :param group_sizes: an ordered :py:class:`list` of :py:class:`float` the
+        group sizes to split each input :py:class:`TensorMap` into. A
+        :py:class:`list` of :py:class:`int` will be interpreted as an indication
+        of the absolute group sizes, whereas a list of float as indicating the
+        relative sizes. For the former case, the sum of this list must be <= the
+        total number of unique indices present in the input `tensors` for the
+        chosen `axis` and `names`. In the latter, the sum of this list must be
+        <= 1.
+    :param seed: an :py:class:`int` that seeds the numpy random number
+        generator. Used to control shuffling of the unique indices, which
+        dictate the data that ends up in each of the split output tensors. If
+        None (default), no shuffling of the indices occurs. If a
+        :py:class:`int`, shuffling is executed but with a random seed set to
+        this value.
 
-    :return split_tensors: list of list of :py:class:`TensorMap`. The ith
-        element in the list contains `n_groups` :py:class:`TensorMap` objects
-        corresponding to the split ith :py:class:`TensorMap` of the input list
-        `tensors`.
+    :return split_tensors: :py:class:`list` of :py:class:`list` of
+        :py:class:`TensorMap`. The ``i``th element in the list contains
+        `n_groups` :py:class:`TensorMap` objects corresponding to the split ith
+        :py:class:`TensorMap` of the input list `tensors`.
     :return grouped_labels: list of :py:class:`Labels` corresponding to the
         unique indices according to the specified `axis` and `names` that are
         present in each of the returned groups of :py:class:`TensorMap`. The
@@ -93,7 +94,7 @@ def split_data(
     will be split equally by structure index. If the number of unique strutcure
     indices present in the input data is not exactly divisible by `n_groups`,
     the group sizes will be made to the nearest int. Without specifying
-    `random_seed`, no shuffling of the structure indices will occur and they
+    `seed`, no shuffling of the structure indices will occur and they
     will be grouped in lexigraphical order. For instance, if the input tensor
     has structure indices 0 -> 9 (inclusive), the first new tensor will contain
     only structure indices 0 -> 4 (inc.) and the second will contain only 5 -> 9
@@ -116,7 +117,7 @@ def split_data(
     will contain structure indices 0 -> 7 (inc.) and the `in_test` and
     `out_test` tensors will contain structure indices 8 -> 9 (inc.). As we want
     to specify relative group sizes, we will pass `group_sizes` as a list of
-    float. Specifying the `random_seed` will shuffle the structure indices
+    float. Specifying the `seed` will shuffle the structure indices
     before the groups are made.
 
     .. code-block:: python
@@ -129,14 +130,14 @@ def split_data(
             names=["structure"],
             n_groups=2,                  # for train-test split
             group_sizes=[0.8, 0.2],  # relative, a 80% 20% train-test split
-            random_seed=100,
+            seed=100,
         )
 
     Split 2 tensors corresponding to input and output data into train, test, and
     validation data. If input and output tensors have the same 10 structure
     indices, we can split such that the train, test, and val tensors have 7,
     2, and 1 structures in each, respectively. We want to specify absolute
-    group sizes, so will pass a list of int. Specifying the `random_seed` will
+    group sizes, so will pass a list of int. Specifying the `seed` will
     shuffle the structure indices before they are grouped.
 
     .. code-block:: python
@@ -173,7 +174,7 @@ def split_data(
             names=["structure"],
             n_groups=3,  # for train-test-validation
             group_sizes=[7, 2, 1],  # absolute; 7, 2, 1 for train, test, val
-            random_seed=100,
+            seed=100,
         )
         # Inspect the grouped structure indices
         grouped_labels
@@ -189,7 +190,7 @@ def split_data(
     # Check input args and parse `tensors` and `names` into lists
     tensors = [tensors] if isinstance(tensors, TensorMap) else tensors
     names = [names] if isinstance(names, str) else names
-    _check_args(tensors, axis, names, n_groups, group_sizes, random_seed)
+    _check_args(tensors, axis, names, n_groups, group_sizes, seed)
 
     # Get array of unique indices to split by for each tensor in `tensors`
     unique_idxs_list = [
@@ -200,16 +201,18 @@ def split_data(
     _check_labels_equivalent(unique_idxs_list)
     unique_idxs = unique_idxs_list[0]
 
-    # Shuffle the unique indices according to the random seed
-    _shuffle_indices(unique_idxs, random_seed)
+    # Shuffle the unique indices according to the random seed if specified
+    if seed is not None:
+        rng = np.random.default_rng(seed)
+        rng.shuffle(unique_idxs)
 
     # Must be at least as many unique indices as groups
     n_indices = len(unique_idxs)
     if n_indices < n_groups:
         raise ValueError(
             f"the number of groups specified ({n_groups}) is greater than the"
-            + f" number of unique metadata indices ({n_indices}) for the"
-            + f" chosen axis {axis} and names {names}: {unique_idxs}"
+            f" number of unique metadata indices ({n_indices}) for the"
+            f" chosen axis {axis} and names {names}: {unique_idxs}"
         )
 
     # Get group sizes
@@ -220,8 +223,8 @@ def split_data(
     if n_indices < sum(group_sizes):
         raise ValueError(
             f"the sum of the absolute group sizes ({sum(group_sizes)}) is greater than "
-            + f"the number of unique metadata indices ({n_indices}) for the chosen "
-            + f"axis {axis} and names {names}: {unique_idxs}"
+            f"the number of unique metadata indices ({n_indices}) for the chosen "
+            f"axis {axis} and names {names}: {unique_idxs}"
         )
 
     # Group the indices according to the group sizes
@@ -235,20 +238,6 @@ def split_data(
     return split_tensors, grouped_labels
 
 
-def _shuffle_indices(indices: Labels, random_seed: Optional[int] = None):
-    """
-    Shuffles the input Labels object `indices` according to the random seed. If
-    `random_seed=None`, not shuffling is performed and the indices are just
-    returned. If -1, shuffling occurs but with no random seed set. If an integer
-    != -1, shuffling is executed but with a random seed set to this value. There
-    is no return value, as the input `indices` is shuffled in place.
-    """
-    if random_seed is not None:  # shuffle
-        if random_seed != -1:  # set a numpy random seed
-            np.random.seed(random_seed)
-        np.random.shuffle(indices)
-
-
 def _get_group_sizes(
     n_groups: int,
     n_indices: int,
@@ -256,7 +245,17 @@ def _get_group_sizes(
 ) -> np.ndarray:
     """
     Parses the `group_sizes` arg from :py:func:`split_data` and returns an array
-    of group sizes in absolute numbers.
+    of group sizes in absolute terms. If `group_sizes` is None, the group sizes
+    returned are (to the nearest integer) evenly distributed across the number
+    of unique indices; i.e. if there are 12 unique indices (`n_indices=10`), and
+    `n_groups` is 3, the group sizes returned will be np.array([4, 4, 4]). If
+    `group_sizes` is specified as a list of floats (i.e. relative sizes, whose
+    sum is <= 1), the group sizes returned are converted to absolute sizes, i.e.
+    multiplied by `n_indices`. If `group_sizes` is specified as a list of int,
+    no conversion is performed. A cascade round is used to make sure that the
+    group sizes are integers, with the sum of the list preserved and the
+    rounding error minimized.
+
 
     :param n_groups: an int, the number of groups to split the data into :param
         n_indices: an int, the number of unique indices present in the data by
@@ -314,8 +313,7 @@ def _cascade_round(array: np.ndarray) -> np.ndarray:
 
 def _group_indices(indices: Labels, group_sizes: List[int]) -> Labels:
     """
-    Sets a numpy `random_seed` then randomly shuffles `indices`. Next, these
-    indices are split into smaller groups according to the sizes specified in
+    Splits `indices` into smaller groups according to the sizes specified in
     `group_sizes`, and returned as a list of :py:class:`Labels` objects.
     """
     # Group the indices
@@ -344,7 +342,7 @@ def _check_labels_equivalent(
         if not np.array_equal(ref_labels, test_label):
             raise ValueError(
                 "Labels objects in `labels_list` are not equivalent:"
-                + f" {ref_labels} != {test_label}"
+                f" {ref_labels} != {test_label}"
             )
 
 
@@ -354,7 +352,7 @@ def _check_args(
     names: List[str],
     n_groups: int,
     group_sizes: Optional[Union[List[float], List[int]]],
-    random_seed: Optional[int],
+    seed: Optional[int],
 ):
     """Checks the input args for :py:func:`split_data`."""
     # Check tensors passed as a list
@@ -367,7 +365,7 @@ def _check_args(
         if not isinstance(tensor, TensorMap):
             raise TypeError(
                 "`tensors` must be a list of equistore `TensorMap`,"
-                + f" got {type(tensors)}"
+                f" got {type(tensors)}"
             )
     # Check axis
     if not isinstance(axis, str):
@@ -387,7 +385,7 @@ def _check_args(
             if name not in tmp_names:
                 raise ValueError(
                     f"the passed `TensorMap` objects have {axis} names {tmp_names}"
-                    + f" that do not match the one passed in `names` {names}"
+                    f" that do not match the one passed in `names` {names}"
                 )
     # Check n_groups
     if not isinstance(n_groups, int):
@@ -399,33 +397,31 @@ def _check_args(
         if not isinstance(group_sizes, list):
             raise TypeError(
                 "`group_sizes` must be passed as a list of float or int,"
-                + f" got {type(group_sizes)}"
+                f" got {type(group_sizes)}"
             )
         if len(group_sizes) != n_groups:
             raise ValueError(
                 "if specifying `group_sizes`, you must pass a list whose"
-                + " number of elements equal to `n_groups`"
+                " number of elements equal to `n_groups`"
             )
         for size in group_sizes:
             if not isinstance(size, (int, float)):
                 raise TypeError(
                     "`group_sizes` must be passed as a list of float or int,"
-                    + f" got {type(group_sizes)}"
+                    f" got {type(group_sizes)}"
                 )
             if not size > 0:
                 raise ValueError(
                     "all elements of `group_sizes` must be greater than 0,"
-                    + f" got {group_sizes}"
+                    f" got {group_sizes}"
                 )
         if np.all([isinstance(size, float) for size in group_sizes]):
             if np.sum(group_sizes) > 1:
                 raise ValueError(
                     "if specifying `group_sizes` as a list of float, the sum of"
-                    + " the list must be less than or equal to 1"
+                    " the list must be less than or equal to 1"
                 )
-    # Check random_seed
-    if random_seed is not None:
-        if not isinstance(random_seed, int):
-            raise TypeError(
-                f"`random_seed` must be passed as an `int`, got {type(random_seed)}"
-            )
+    # Check seed
+    if seed is not None:
+        if not isinstance(seed, int):
+            raise TypeError(f"`seed` must be passed as an `int`, got {type(seed)}")

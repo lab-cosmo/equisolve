@@ -5,6 +5,7 @@
 #
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
+import re
 from typing import List
 
 import equistore
@@ -279,7 +280,7 @@ def check_other_metadata(split_tensors: List[TensorMap], axis: str):
                 if not np.all(ref_block.components[c_i] == check_block.components[c_i]):
                     pytest.fail(
                         f"components don't match: {ref_block.components[c_i]}"
-                        + f" != {check_block.components[c_i]}"
+                        f" != {check_block.components[c_i]}"
                     )
 
 
@@ -353,11 +354,12 @@ class TestSplitData:
         samples_idxs = np.array([0, 1, 2, 3, 4, 5, 6, 8])
         # Copy and shuffle the indices using a seed
         shuffled_sample_idxs = np.array(samples_idxs, copy=True)
-        random_seed = 1
-        np.random.seed(random_seed)
-        np.random.shuffle(shuffled_sample_idxs)
-        # Set the random seed to a different random seed
-        np.random.seed(31415)
+        seed = 1
+        rng = np.random.default_rng(seed)
+        rng.shuffle(shuffled_sample_idxs)
+        # Set the random seed to a different random seed to check that the
+        # function is using the correct seed
+        rng = np.random.default_rng(31415)
         # Define the target grouped indices
         target_grouped_labels = [
             Labels(
@@ -373,7 +375,7 @@ class TestSplitData:
             axis=axis,
             names=names,
             n_groups=n_groups,
-            random_seed=random_seed,
+            seed=seed,
         )
         # actual and target grouped indices are the same
         assert_equal(actual_grouped_labels, target_grouped_labels)
@@ -581,31 +583,25 @@ class TestSplitDataErrors:
         Checks for exceptions on the `tensors` arg.
         """
         # Not passing a TensorMap
-        with pytest.raises(TypeError) as e:
-            tensors = 5
+        tensors = 5
+        msg = f"`tensors` must be a list of equistore `TensorMap`, got {type(tensors)}"
+        with pytest.raises(TypeError, match=re.escape(msg)):
             split_data(
                 tensors=tensors,
                 axis="samples",
                 names="samples",
                 n_groups=3,
             )
-        assert (
-            str(e.value)
-            == f"`tensors` must be a list of equistore `TensorMap`, got {type(tensors)}"
-        )
         # Not passing a list of TensorMap
-        with pytest.raises(TypeError) as e:
-            tensors = [test_tensor_map_a, 3]
+        tensors = [test_tensor_map_a, 3]
+        msg = f"`tensors` must be a list of equistore `TensorMap`, got {type(tensors)}"
+        with pytest.raises(TypeError, match=re.escape(msg)):
             split_data(
                 tensors=tensors,
                 axis="samples",
                 names="samples",
                 n_groups=3,
             )
-        assert (
-            str(e.value)
-            == f"`tensors` must be a list of equistore `TensorMap`, got {type(tensors)}"
-        )
         # Passing just a TensorMap, not in a list is ok
         split_data(
             tensors=test_tensor_map_a,
@@ -619,103 +615,102 @@ class TestSplitDataErrors:
         Checks for exceptions on the `axis` arg.
         """
         # Passing axis not as a string
-        with pytest.raises(TypeError) as e:
-            axis = 3.14
+        axis = 3.14
+        msg = f"`axis` must be passed as a str, got {type(axis)}"
+        with pytest.raises(TypeError, match=re.escape(msg)):
             split_data(
                 tensors=test_tensor_map_a,
                 axis=axis,
                 names="samples",
                 n_groups=3,
             )
-        assert str(e.value) == f"`axis` must be passed as a str, got {type(axis)}"
-        # Passing axis as an incorrect str
-        with pytest.raises(ValueError) as e:
-            axis = "not_samples"
+        # Passing axis as an incorrect str\
+        axis = "not_samples"
+        msg = f"`axis` must be passsed as either 'samples' or 'properties', got {axis}"
+        with pytest.raises(ValueError, match=re.escape(msg)):
             split_data(
                 tensors=test_tensor_map_a,
                 axis=axis,
                 names="samples",
                 n_groups=3,
             )
-        assert (
-            str(e.value)
-            == f"`axis` must be passsed as either 'samples' or 'properties', got {axis}"
-        )
 
     def test_split_data_errors_arg_names(self, test_tensor_map_a):
         """
         Checks for exceptions on the `names` arg.
         """
         # Passing axis not as a list
-        with pytest.raises(TypeError) as e:
-            names = 3.14
+        names = 3.14
+        msg = f"`names` must be a list of str, got {type(names)}"
+        with pytest.raises(TypeError, match=re.escape(msg)):
             split_data(
                 tensors=test_tensor_map_a,
                 axis="samples",
                 names=names,
                 n_groups=3,
             )
-        assert str(e.value) == f"`names` must be a list of str, got {type(names)}"
         # Passing axis not as a list
-        with pytest.raises(TypeError) as e:
-            names = [3.14, 6.28]
+        names = [3.14, 6.28]
+        msg = f"`names` must be a list of str, got {type(names)}"
+        with pytest.raises(TypeError, match=re.escape(msg)):
             split_data(
                 tensors=test_tensor_map_a,
                 axis="samples",
                 names=names,
                 n_groups=3,
             )
-        assert str(e.value) == f"`names` must be a list of str, got {type(names)}"
         # Passing non-existent names
-        with pytest.raises(ValueError) as e:
-            axis = "samples"
-            names = ["not_samples"]
+        axis = "samples"
+        names = ["not_samples"]
+        tmp_names = ("samples",)
+        msg = (
+            f"the passed `TensorMap` objects have {axis} names {tmp_names}"
+            f" that do not match the one passed in `names` {names}"
+        )
+        with pytest.raises(ValueError, match=re.escape(msg)):
             split_data(
                 tensors=test_tensor_map_a,
                 axis=axis,
                 names=names,
                 n_groups=3,
             )
-        tmp_names = ("samples",)
-        assert str(e.value) == (
-            f"the passed `TensorMap` objects have {axis} names {tmp_names}"
-            + f" that do not match the one passed in `names` {names}"
-        )
 
     def test_split_data_errors_arg_n_groups(self, test_tensor_map_a):
         """
         Checks for exceptions on the `n_groups` arg.
         """
         # Passing n_groups not as an int
-        with pytest.raises(TypeError) as e:
-            n_groups = 3.14
+        n_groups = 3.14
+        msg = f"`n_groups` must be passed as an int, got {type(n_groups)}"
+        with pytest.raises(TypeError, match=re.escape(msg)):
             split_data(
                 tensors=test_tensor_map_a,
                 axis="samples",
                 names="samples",
                 n_groups=n_groups,
             )
-        assert (
-            str(e.value) == f"`n_groups` must be passed as an int, got {type(n_groups)}"
-        )
         # Passing n_groups as a negative int
-        with pytest.raises(ValueError) as e:
-            n_groups = -3
+        n_groups = -3
+        msg = f"`n_groups` must be greater than 0, got {n_groups}"
+        with pytest.raises(ValueError, match=re.escape(msg)):
             split_data(
                 tensors=test_tensor_map_a,
                 axis="samples",
                 names="samples",
                 n_groups=n_groups,
             )
-        assert str(e.value) == f"`n_groups` must be greater than 0, got {n_groups}"
 
     def test_split_data_errors_arg_group_sizes(self, test_tensor_map_a):
         """
         Checks for exceptions on the `group_sizes` arg.
         """
         # Passing group_sizes not as a list
-        with pytest.raises(TypeError) as e:
-            group_sizes = 3.14
+        group_sizes = 3.14
+        msg = (
+            "`group_sizes` must be passed as a list of float or int,"
+            f" got {type(group_sizes)}"
+        )
+        with pytest.raises(TypeError, match=re.escape(msg)):
             split_data(
                 tensors=test_tensor_map_a,
                 axis="samples",
@@ -723,14 +718,13 @@ class TestSplitDataErrors:
                 n_groups=3,
                 group_sizes=group_sizes,
             )
-        assert (
-            str(e.value)
-            == "`group_sizes` must be passed as a list of float or int,"
-            + f" got {type(group_sizes)}"
-        )
         # Passing group_sizes not as a list of int or float
-        with pytest.raises(TypeError) as e:
-            group_sizes = [3.14, "3.14", "6.28"]
+        group_sizes = [3.14, "3.14", "6.28"]
+        msg = (
+            "`group_sizes` must be passed as a list of float or int,"
+            f" got {type(group_sizes)}"
+        )
+        with pytest.raises(TypeError, match=re.escape(msg)):
             split_data(
                 tensors=test_tensor_map_a,
                 axis="properties",
@@ -738,14 +732,10 @@ class TestSplitDataErrors:
                 n_groups=3,
                 group_sizes=group_sizes,
             )
-        assert (
-            str(e.value)
-            == "`group_sizes` must be passed as a list of float or int,"
-            + f" got {type(group_sizes)}"
-        )
         # Passing group_sizes as a list of negative int or float
-        with pytest.raises(ValueError) as e:
-            group_sizes = [-3, 3]
+        group_sizes = [-3, 3]
+        msg = f"all elements of `group_sizes` must be greater than 0, got {group_sizes}"
+        with pytest.raises(ValueError, match=re.escape(msg)):
             split_data(
                 tensors=test_tensor_map_a,
                 axis="samples",
@@ -753,14 +743,13 @@ class TestSplitDataErrors:
                 n_groups=2,
                 group_sizes=group_sizes,
             )
-        assert (
-            str(e.value)
-            == "all elements of `group_sizes` must be greater than 0,"
-            + f" got {group_sizes}"
-        )
         # Passing group_sizes as a list of float whose sum is > 1
-        with pytest.raises(ValueError) as e:
-            group_sizes = [0.7, 0.4]
+        group_sizes = [0.7, 0.4]
+        msg = (
+            "if specifying `group_sizes` as a list of float, the sum of"
+            " the list must be less than or equal to 1"
+        )
+        with pytest.raises(ValueError, match=re.escape(msg)):
             split_data(
                 tensors=test_tensor_map_a,
                 axis="properties",
@@ -768,35 +757,37 @@ class TestSplitDataErrors:
                 n_groups=2,
                 group_sizes=group_sizes,
             )
-        assert (
-            str(e.value)
-            == "if specifying `group_sizes` as a list of float, the sum of"
-            + " the list must be less than or equal to 1"
-        )
         # Passing group_sizes as a list of int whose sum is greater than the
         # number of unique properties
-        with pytest.raises(ValueError) as e:
-            group_sizes = [3, 3]
-            split_data(
-                tensors=test_tensor_map_a,
-                axis="properties",
-                names="properties",
-                n_groups=2,
-                group_sizes=group_sizes,
-            )
+        group_sizes = [3, 3]
         unique_idxs = equistore.unique_metadata(
             test_tensor_map_a, "properties", "properties"
         )
-        assert (
-            str(e.value)
-            == f"the sum of the absolute group sizes ({sum(group_sizes)}) is greater"
-            + f" than the number of unique metadata indices ({4}) for the chosen "
-            + f"axis {'properties'} and names {['properties']}: {unique_idxs}"
+        msg = (
+            f"the sum of the absolute group sizes ({sum(group_sizes)}) is greater"
+            f" than the number of unique metadata indices ({4}) for the chosen "
+            f"axis {'properties'} and names {['properties']}: {unique_idxs}"
         )
+        with pytest.raises(ValueError, match=re.escape(msg)):
+            split_data(
+                tensors=test_tensor_map_a,
+                axis="properties",
+                names="properties",
+                n_groups=2,
+                group_sizes=group_sizes,
+            )
         # Passing group_sizes as a list of a single int which is greater than
         # the number of unique properties
-        with pytest.raises(ValueError) as e:
-            group_sizes = [1000]
+        group_sizes = [1000]
+        unique_idxs = equistore.unique_metadata(
+            test_tensor_map_a, "properties", "properties"
+        )
+        msg = (
+            f"the sum of the absolute group sizes ({sum(group_sizes)}) is greater"
+            f" than the number of unique metadata indices ({4}) for the chosen "
+            f"axis {'properties'} and names {['properties']}: {unique_idxs}"
+        )
+        with pytest.raises(ValueError, match=re.escape(msg)):
             split_data(
                 tensors=test_tensor_map_a,
                 axis="properties",
@@ -804,31 +795,19 @@ class TestSplitDataErrors:
                 n_groups=1,
                 group_sizes=group_sizes,
             )
-        unique_idxs = equistore.unique_metadata(
-            test_tensor_map_a, "properties", "properties"
-        )
-        assert (
-            str(e.value)
-            == f"the sum of the absolute group sizes ({sum(group_sizes)}) is greater"
-            + f" than the number of unique metadata indices ({4}) for the chosen "
-            + f"axis {'properties'} and names {['properties']}: {unique_idxs}"
-        )
 
-    def test_split_data_errors_random_seed(self, test_tensor_map_a):
+    def test_split_data_errors_seed(self, test_tensor_map_a):
         """
-        Checks for exceptions on the `random_seed` arg.
+        Checks for exceptions on the `seed` arg.
         """
-        # Passing random_seed not as an int
-        with pytest.raises(TypeError) as e:
-            random_seed = 3.14
+        # Passing seed not as an int
+        seed = 3.14
+        msg = f"`seed` must be passed as an `int`, got {type(seed)}"
+        with pytest.raises(TypeError, match=re.escape(msg)):
             split_data(
                 tensors=test_tensor_map_a,
                 axis="samples",
                 names="samples",
                 n_groups=3,
-                random_seed=random_seed,
+                seed=seed,
             )
-        assert (
-            str(e.value)
-            == f"`random_seed` must be passed as an `int`, got {type(random_seed)}"
-        )
