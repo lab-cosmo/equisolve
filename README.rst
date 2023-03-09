@@ -21,4 +21,4 @@ For details, tutorials, and examples, please have a look at our `documentation`_
 
 .. |docs| image:: https://img.shields.io/badge/documentation-latest-sucess
    :alt: Documentation
-   :target: https://github.com/lab-cosmo/equisolve
+   :target: https://lab-cosmo.github.io/equisolve/latest/
