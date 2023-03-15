@@ -4,10 +4,12 @@ import numpy as np
 from equistore import Labels, TensorBlock, TensorMap
 from equistore.operations.equal_metadata import _check_blocks, _check_maps
 
+from ... import HAS_TORCH
+from ...module import NumpyModule, _Transformer
 from ..utils import block_to_array, dict_to_tensor_map, tensor_map_to_dict
 
 
-class StandardScaler:
+class _StandardScaler(_Transformer):
     """Standardize features by removing the mean and scaling to unit variance.
 
     :param parameter_keys:
@@ -327,3 +329,42 @@ class StandardScaler:
         self.mean_map_ = tensor_map_to_dict(self.mean_map_)
         self.scale_map_ = tensor_map_to_dict(self.scale_map_)
         return TensorMap(X.keys, blocks)
+
+
+class NumpyStandardScaler(_StandardScaler, NumpyModule):
+    def __init__(
+        self,
+        parameter_keys: Union[List[str], str],
+        with_mean: bool = True,
+        with_std: bool = True,
+        column_wise: bool = False,
+        rtol: float = 0.0,
+        atol: float = 1e-12,
+    ) -> None:
+        NumpyModule.__init__(self)
+        _StandardScaler.__init__(
+            self, parameter_keys, with_mean, with_std, column_wise, rtol, atol
+        )
+
+
+if HAS_TORCH:
+    import torch
+
+    class TorchStandardScaler(_StandardScaler, torch.nn.Module):
+        def __init__(
+            self,
+            parameter_keys: Union[List[str], str],
+            with_mean: bool = True,
+            with_std: bool = True,
+            column_wise: bool = False,
+            rtol: float = 0.0,
+            atol: float = 1e-12,
+        ) -> None:
+            torch.nn.Module.__init__(self)
+            _StandardScaler.__init__(
+                self, parameter_keys, with_mean, with_std, column_wise, rtol, atol
+            )
+
+    StandardScaler = TorchStandardScaler
+else:
+    StandardScaler = NumpyStandardScaler

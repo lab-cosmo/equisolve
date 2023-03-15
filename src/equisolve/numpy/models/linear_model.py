@@ -14,11 +14,13 @@ import scipy.linalg
 from equistore import Labels, TensorBlock, TensorMap
 from equistore.operations.equal_metadata import _check_blocks, _check_maps
 
+from ... import HAS_TORCH
+from ...module import NumpyModule, _Estimator
 from ...utils.metrics import rmse
 from ..utils import block_to_array, dict_to_tensor_map, tensor_map_to_dict
 
 
-class Ridge:
+class _Ridge(_Estimator):
     r"""Linear least squares with l2 regularization for :class:`equistore.Tensormap`'s.
 
     Weights :math:`w` are calculated according to
@@ -356,3 +358,28 @@ class Ridge:
         """
         y_pred = self.predict(X)
         return rmse(y, y_pred, parameter_key)
+
+
+class NumpyRidge(_Ridge, NumpyModule):
+    def __init__(
+        self,
+        parameter_keys: Union[List[str], str] = None,
+    ) -> None:
+        NumpyModule.__init__(self)
+        _Ridge.__init__(self, parameter_keys)
+
+
+if HAS_TORCH:
+    import torch
+
+    class TorchRidge(_Ridge, torch.nn.Module):
+        def __init__(
+            self,
+            parameter_keys: Union[List[str], str] = None,
+        ) -> None:
+            torch.nn.Module.__init__(self)
+            _Ridge.__init__(self, parameter_keys)
+
+    Ridge = TorchRidge
+else:
+    Ridge = NumpyRidge
