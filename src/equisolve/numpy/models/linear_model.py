@@ -17,8 +17,9 @@ from equistore.operations._utils import _check_blocks, _check_maps
 from ...utils.metrics import rmse
 from ..utils import block_to_array, dict_to_tensor_map, tensor_map_to_dict
 
+from ...module import EstimatorModule
 
-class Ridge:
+class Ridge(EstimatorModule):
     r"""Linear least squares with l2 regularization for :class:`equistore.Tensormap`'s.
 
     Weights :math:`w` are calculated according to

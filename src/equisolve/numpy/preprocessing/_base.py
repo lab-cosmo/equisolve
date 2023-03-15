@@ -6,8 +6,10 @@ from equistore.operations._utils import _check_blocks, _check_maps
 
 from ..utils import block_to_array, dict_to_tensor_map, tensor_map_to_dict
 
+from ...module import TransformerModule
 
-class StandardScaler:
+
+class StandardScaler(TransformerModule):
     """Standardize features by removing the mean and scaling to unit variance.
 
     :param parameter_keys:
