@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta
 
 from typing import TypeVar
 
@@ -12,30 +12,30 @@ try:
     import torch
     Module = torch.nn.Module
 except:
-    class Module:
+    class Module(metaclass=ABCMeta):
         @abstractmethod
-        def forward(self, X: TensorMap):
-            raise NotImplemented("Abstract method was invoked, needs implementation.")
+        def forward(self, *args, **kwargs):
+            return
 
 
 TEstimatorModule = TypeVar("TEstimatorModule", bound="EstimatorModule")
 
 
-class EstimatorModule(Module):
+class EstimatorModule(Module, metaclass=ABCMeta):
     def forward(self, X: TensorMap):
         return self.predict(X)
 
     @abstractmethod
     def fit(self, X: TensorMap, y: TensorMap) -> TEstimatorModule:
-        raise NotImplemented("Abstract method was invoked, needs implementation.")
+        return
 
     @abstractmethod
     def predict(self, X: TensorMap) -> TensorMap:
-        raise NotImplemented("Abstract method was invoked, needs implementation.")
+        return
 
     @abstractmethod
     def score(self, X: TensorMap, y: TensorMap) -> TensorMap:
-        raise NotImplemented("Abstract method was invoked, needs implementation.")
+        return
 
     def fit_score(self, X: TensorMap, y: TensorMap = None) -> TensorMap:
         self.fit(X, y)
@@ -45,17 +45,17 @@ class EstimatorModule(Module):
 TTransformerModule = TypeVar("TTransformerModule", bound="TransformerModule")
 
 
-class TransformerModule(Module):
+class TransformerModule(Module, metaclass=ABCMeta):
     def forward(self, X: TensorMap):
-        return self.predict(X)
+        return self.transform(X)
 
     @abstractmethod
     def fit(self, X: TensorMap, y: TensorMap = None) -> TTransformerModule:
-        raise NotImplemented("Abstract method was invoked, needs implementation.")
+        return
 
     @abstractmethod
     def transform(self, X: TensorMap) -> TensorMap:
-        raise NotImplemented("Abstract method was invoked, needs implementation.")
+        return
 
     def fit_transform(self, X: TensorMap, y: TensorMap = None) -> TensorMap:
         self.fit(X, y)

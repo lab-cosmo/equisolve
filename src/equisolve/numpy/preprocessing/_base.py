@@ -8,7 +8,6 @@ from ..utils import block_to_array, dict_to_tensor_map, tensor_map_to_dict
 
 from ...module import TransformerModule
 
-
 class StandardScaler(TransformerModule):
     """Standardize features by removing the mean and scaling to unit variance.
 
