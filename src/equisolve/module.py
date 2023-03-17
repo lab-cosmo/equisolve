@@ -17,9 +17,11 @@ except:
         def forward(self, *args, **kwargs):
             return
 
+        def __call__(self, *args, **kwargs):
+            self.forward(*args, **kwargs)
+
 
 TEstimatorModule = TypeVar("TEstimatorModule", bound="EstimatorModule")
-
 
 class EstimatorModule(Module, metaclass=ABCMeta):
     def forward(self, X: TensorMap):
