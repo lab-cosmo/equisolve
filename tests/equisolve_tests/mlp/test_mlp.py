@@ -1,0 +1,1 @@
+from equisolve.mlp import EquistorePairPotential
