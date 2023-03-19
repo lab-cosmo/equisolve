@@ -21,7 +21,7 @@ class IpiDriver:
 
         # reference structure is needed to determine atomic numbers,
         # because i-pi does not pass them, smart i-pi
-        self._reference_structure = ase.io.load(args_list[1])
+        self._reference_structure = ase.io.read(args_list[1])
 
         self._potential = load(self._potential_filename)
 
