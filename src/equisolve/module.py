@@ -4,6 +4,8 @@ from abc import abstractmethod, ABCMeta
 
 from typing import TypeVar, Dict
 from collections import OrderedDict
+from zipfile import ZipFile
+import os
 
 from equistore import TensorMap, TensorBlock
 
@@ -144,30 +146,64 @@ class TransformerModule(Module, metaclass=ABCMeta):
         self.fit(X, y)
         return self.transform(X)
 
-def save(module: Module, f: str):
+def save(module: Module, module_file: str, f: str):
     """
     Saves to a pickable object
     """
-    # PR COMMMENT: 
-    # torch.save is just nice wrapper for pickle as far as I understand.
-    # It can also save TorchScripts by dispatching to jit.save,
-    # but that is not really intended. So we can just use it here
-    if HAS_TORCH:
-        torch.save(f)
-    else:
-        with open(f, 'wb') as file:
-            module = pickle.dump(file)
+    base_name_f = f.split(".")[0]
+    with ZipFile(base_name_f+".zip", mode="w") as script_zip:
+        script_zip.write(module_file)
+
+        with open(base_name_f+".pickle", "wb") as file:
+            pickle.dump(module, file)
+        script_zip.write(base_name_f+".pickle")
+        # TODO needs a check if file before existed
+        #os.remove(base_name_f+".pickle")
 
 
-def load(f: str):
+def load(f: str) -> Module:
     """
     Loads a pickable object
     """
-    if HAS_TORCH:
-        torch.load(f)
-    else:
-        with open(f, 'rb') as file:
+    base_name_f = f.split(".")[0]
+    f = base_name_f + ".zip"
+
+    filter_pickle = lambda name : True if name[-7:] == ".pickle" else False
+    filter_module = lambda name : True if name[-3:] == ".py" else False
+    with ZipFile(f, mode="r") as script_zip:
+        # PR COMMENT: at the moment I don't know how to do
+        #             a more sophisticated approach allowing
+        #             to load multiple files (module like)
+        possible_pickle_files = list(filter(filter_pickle, script_zip.namelist()))
+        if len(possible_pickle_files) > 1:
+            raise ValueError("Your zip files contains multiple pickle files. "
+                             "Not sure which one is your module.")
+        if len(possible_pickle_files) == 0:
+            raise ValueError("Your zip files contains no pickle file. "
+                             "Cannot load your module.")
+
+        possible_module_files = list(filter(filter_module, script_zip.namelist()))
+        if len(possible_module_files) > 1:
+            raise ValueError("Your zip files contains multiple module files. "
+                             "Not sure which one is your module.")
+        if len(possible_module_files) == 0:
+            raise ValueError("Your zip files contains no module file. "
+                             "Cannot load your module.")
+
+        module_filename = possible_module_files[0]
+        # PR COMMENT: not really clean way to execute file
+        # this approach did not work because the imports did not work
+        #with open(module_filename, "r") as file:
+        #    code = file.read()
+        #exec(code)
+        script_zip.extract(module_filename)
+        os.system(f"python ./{module_filename}")
+
+        pickle_filename = possible_pickle_files[0]
+        script_zip.extract(pickle_filename)
+        with open(pickle_filename, "rb") as file:
             module = pickle.load(file)
+    return module
 
 if HAS_TORCH:
     # PR COMMENT: Maybe we can store also the init args and kwargs
