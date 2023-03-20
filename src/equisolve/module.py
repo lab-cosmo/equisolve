@@ -6,8 +6,11 @@ from typing import TypeVar, Dict
 from collections import OrderedDict
 from zipfile import ZipFile
 import os
+import importlib.util
 
 from equistore import TensorMap, TensorBlock
+
+import sys
 
 # Workaround for typing Self with inheritance for python <3.11
 # see https://peps.python.org/pep-0673/
@@ -196,8 +199,33 @@ def load(f: str) -> Module:
         #with open(module_filename, "r") as file:
         #    code = file.read()
         #exec(code)
+
         script_zip.extract(module_filename)
-        os.system(f"python ./{module_filename}")
+
+        # this approach did not work outsite of a notebook
+        # where the name scope is the same
+        #os.system(f"python ./{module_filename}")
+
+
+        base_name_module = module_filename.split(".")[0]
+        #print("os.getcwd()", os.getcwd())
+        #exec(f"import os; print(os.getcwd())\n"
+        #     f"import {base_name_module}\n"
+        #     f"from {base_name_module} import *")
+
+        spec = importlib.util.spec_from_file_location(base_name_module , module_filename)
+        module_package = importlib.util.module_from_spec(spec)
+        sys.modules[base_name_module] = module_package
+        spec.loader.exec_module(module_package)
+        if "__all__" in module_package.__dict__:
+            names = module_package.__dict__["__all__"]
+        else:
+            # otherwise we import all names that don't begin with _
+            names = [x for x in module_package.__dict__ if not x.startswith("_")]
+
+        # now drag them in
+        globals().update({k: getattr(module_package, k) for k in names})
+
 
         pickle_filename = possible_pickle_files[0]
         script_zip.extract(pickle_filename)
@@ -206,9 +234,9 @@ def load(f: str) -> Module:
     return module
 
 if HAS_TORCH:
-    # PR COMMENT: Maybe we can store also the init args and kwargs
+    # PR COMMENT: Maybe we can store also the init args and kwargs5
     #             in our models so we can get them from module input
-    #             torch does not do it as far as I have seen, so 
+    #             torch does not do it as far as I have seen, so
     #             I did not implement it so far
     def convert_to_torch_module(module: NumpyModule, *module_init_args, **module_init_kwargs):
         """

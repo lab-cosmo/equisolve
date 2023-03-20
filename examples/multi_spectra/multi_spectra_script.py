@@ -34,10 +34,7 @@ from equisolve.utils.metrics import rmse
 
 import numpy as np
 
-# Workaround for typing Self with inheritance for python <3.11
-# see https://peps.python.org/pep-0673/
-TEquiScript = TypeVar("TEquiScript", bound="EquiScript")
-
+import ase
 
 class EquiBaseModule(Module, metaclass=ABCMeta):
     """
@@ -100,8 +97,9 @@ class EquiBaseModule(Module, metaclass=ABCMeta):
     #         then one needs to know that the input argument was None, otherwise you overwrite them with one fit or compute call
     # COMMENT I changed code such that _join and fit are completetly independent, so we can actually keep it this way
 
-    def fit(self, X: Dict[str, TensorMap], y: TensorMap, **kwargs) -> TEquiScript:
+    def fit(self, X: Dict[str, TensorMap], y: TensorMap, **kwargs) -> None:
         """TODO"""
+
         # X : (X0, X1, ..., XN)
         self._set_and_check_fit_parameters()
         if "transformer_X" not in kwargs.keys():
@@ -158,7 +156,11 @@ class EquiBaseModule(Module, metaclass=ABCMeta):
         else:
             self._estimator = deepcopy(self.estimator).fit(X, y, **kwargs["estimator"])
 
-    def forward(self, X: Dict[str, TensorMap]) -> TensorMap:
+    def forward(self, frames: Union[ase.Atoms, List[ase.Atoms]]) -> TensorMap:
+        Xi = self.compute(systems=frames, gradients=self._gradients)
+        return self._forward(Xi)
+
+    def _forward(self, X: Dict[str, TensorMap]) -> TensorMap:
         """TODO"""
         # TODO check if is fitted
 
@@ -191,7 +193,7 @@ class EquiBaseModule(Module, metaclass=ABCMeta):
         if self._estimator is None:
             raise ValueError("Cannot use score function without setting an estimator.")
 
-        y_pred =  self.forward(X)
+        y_pred =  self._forward(X)
 
         return np.mean([rmse(y, y_pred, parameter_key) for parameter_key in self._estimator.parameter_keys])
 
@@ -243,6 +245,7 @@ class MultiSpectraModule(EquiBaseModule):
     def __init__(
         self,
         hypers: dict,
+        gradients: List[str],
         *,
         feature_aggregation="mean",
         transformer_X=None,
@@ -257,6 +260,7 @@ class MultiSpectraModule(EquiBaseModule):
             transformer_y=transformer_y,
             estimator=estimator
         )
+        self._gradients = gradients
 
     def _set_and_check_compute_parameters(self):
         valid_hyper_keys = set(["Composition", "SoapRadialSpectrum", "SoapPowerSpectrum"])
@@ -288,6 +292,8 @@ class MultiSpectraModule(EquiBaseModule):
         # input **kwargs same as for a rascaline calculator
         # outputs the (X0, X1, ..., XN), y TensorMap
         self._set_and_check_compute_parameters()
+        # HACK
+        kwargs['gradients'] = self._gradients
 
         descriptors = {}
         if "Composition" in self._hypers.keys():
