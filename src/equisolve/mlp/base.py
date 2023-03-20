@@ -4,7 +4,9 @@ import ase
 
 from typing import Union
 
-import torch # TODO has to be made optional
+from ..module import HAS_TORCH
+if HAS_TORCH:
+    import torch
 import numpy as np
 
 from ..utils import ase_to_tensormap, properties_to_tensormap
@@ -38,24 +40,18 @@ class EquistorePairPotential(Module):
         if self._md_style == "auto":
             # PR COMMENT: for now i focus on the specific branches
             raise NotImplemented("auto is not implemented yet")
-            #if len(args) == 1 and isinstance(args[0], "ase.Atoms")
-            #    # ase-frames
-            #    X = ase_to_tensormap(args[0])
-            #    self._prediction = self._model.forward(X)
-            #elif len(args) == 2 and isinstance(args[0], np.ndarray) and isinstance(args[1], np.ndarray):
-            #    # i-pi
-            #    ase.Atoms(positions=args[1], cell=args[0])
-            #    self._prediction = self._model.forward(args[0])
-            #else:
-            #    raise ValueError(f"args {args} could not be automatically detected. Might be not supported")
-        elif structure_input_style == "ase-frames":
-            X = ase_to_tensormap(args[0])
-            self._prediction = self._model.forward(X)
+        elif self._md_style == "ase-frames":
+            print(args[0])
+            if not(isinstance(args[0], ase.Atoms)):
+                raise ValueError(f"Argument 2 is {type(args[0])} but ase.Atoms expected.")
+            self._prediction = self._model.forward(args[0])
         else:
             NotImplemented(f"MD style {self._md_style} not implemented")
+        # PR COMMENT not sure if outputing in md style makes more sense here
+        return self._prediction
 
     @property
-    def energy(self):
+    def energies(self):
         if self._prediction is None:
             # maybe raise error?
             return None
@@ -68,7 +64,7 @@ class EquistorePairPotential(Module):
         if self._prediction is None:
             # maybe raise error?
             return None
-        forces = self._prediction.block().gradient("positions")
+        forces = self._prediction.block().gradient("positions").data
         # do some additional stuff to have coherent units
         return forces
 
@@ -77,7 +73,7 @@ class EquistorePairPotential(Module):
         if self._prediction is None:
             # maybe raise error?
             return None
-        virial_stress = self._prediction.block().gradient("cell")
+        virial_stress = self._prediction.block().gradient("cell").data
         # do some additional stuff to have coherent units
         return virial_stress
 
@@ -130,10 +126,11 @@ class PairPotential(Module):
     # PR COMMENT:
     #   Should be supported by most NN like SchNet, Allegro 
     #   Probably needs separation for different input types
+    # add torch.Tensor support
     def compute_properties_raw(self,
-                              positions: Union[TensorBlock, torch.Tensor, np.ndarray],
-                              atom_types: Union[TensorBlock, torch.Tensor, np.ndarray],
-                              cell: Union[TensorBlock, torch.Tensor, np.ndarray],
+                              positions: Union[TensorBlock, np.ndarray],
+                              atom_types: Union[TensorBlock, np.ndarray],
+                              cell: Union[TensorBlock, np.ndarray],
                               atomic_properties=False):
         pass
 

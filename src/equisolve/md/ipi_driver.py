@@ -2,6 +2,7 @@ from ..module import load
 import ase.io
 from ipi.utils.units import unit_to_internal, unit_to_user
 import sys
+import numpy as np
 
 # shoud be in i-pi
 class IpiDriver:
@@ -33,10 +34,11 @@ class IpiDriver:
 
         frame = ase.Atoms(positions=pos, cell=cell)
         frame.numbers = self._reference_structure.numbers
+        frame.pbc = self._reference_structure.pbc
 
-        self._potential.compute(frame)
+        self._potential.forward(frame)
 
-        potential_energies = unit_to_internal("energy", "electronvolt",
+        energies = unit_to_internal("energy", "electronvolt",
                                    self._potential.energies.copy())
         forces = unit_to_internal("force", "ev/ang",
                                   self._potential.forces.copy())
