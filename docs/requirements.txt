@@ -1,6 +1,6 @@
 ase
 matplotlib
 furo
-rascaline @ https://github.com/luthaf/rascaline/archive/3a7492e.zip
+rascaline @ https://github.com/luthaf/rascaline/archive/equisolve.zip
 sphinx >=4.4
 sphinx-gallery

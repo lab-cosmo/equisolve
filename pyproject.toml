@@ -17,6 +17,4 @@ lines_after_imports = 2
 known_first_party = "equisolve"
 
 [tool.pytest.ini_options]
-addopts = "-p pytest_cov"
-python_files = ["test_*.py", "*_test.py", "tests.py"]
-testpaths = "tests"
+testpaths = "tests/**/*.py"

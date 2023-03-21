@@ -11,7 +11,7 @@ from typing import List
 
 import numpy as np
 from equistore import TensorMap
-from equistore.operations._utils import _check_maps
+from equistore.operations.equal_metadata import _check_maps
 
 
 def rmse(y_true: TensorMap, y_pred: TensorMap, parameter_key: str) -> List[float]:
