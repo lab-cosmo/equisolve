@@ -191,6 +191,7 @@ intersphinx_mapping = {
     "equistore": ("https://lab-cosmo.github.io/equistore/latest/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "python": ("https://docs.python.org/3", None),
+    "skmatter": ("https://scikit-matter.readthedocs.io/en/latest/", None),
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
