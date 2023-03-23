@@ -12,7 +12,7 @@ from numpy.testing import assert_equal
 
 from equisolve.numpy.sample_selection import CUR, FPS
 
-from .utils import random_single_block_no_components_tensor_map
+from .utilities import random_single_block_no_components_tensor_map
 
 
 class TestSelection:
