@@ -30,6 +30,7 @@ version = equisolve.__version__
 extensions = [
     'sphinx.ext.autodoc', # import the modules you are documenting
     'sphinx.ext.intersphinx', # generate links to the documentation of objects in external projects
+    "sphinx.ext.viewcode", # add links to highlighted source code
     "sphinx_gallery.gen_gallery", # provides a source parser for *.ipynb files
 ]
 
