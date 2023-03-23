@@ -8,11 +8,11 @@
 
 from typing import List, Optional, Union
 
+import equistore
 import numpy as np
 import scipy.linalg
 from equistore import Labels, TensorBlock, TensorMap
-from equistore.operations import dot, multiply, ones_like, slice
-from equistore.operations._utils import _check_blocks, _check_maps
+from equistore.operations.equal_metadata import _check_blocks, _check_maps
 
 from ...utils.metrics import rmse
 from ..utils import block_to_array, dict_to_tensor_map, tensor_map_to_dict
@@ -279,22 +279,22 @@ class Ridge:
         self._solver = solver
 
         if type(alpha) is float:
-            alpha_tensor = ones_like(X)
+            alpha_tensor = equistore.ones_like(X)
 
             samples = Labels(
                 names=X.sample_names,
                 values=np.zeros([1, len(X.sample_names)], dtype=int),
             )
 
-            alpha_tensor = slice(alpha_tensor, samples=samples)
-            alpha = multiply(alpha_tensor, alpha)
+            alpha_tensor = equistore.slice(alpha_tensor, samples=samples)
+            alpha = equistore.multiply(alpha_tensor, alpha)
         elif type(alpha) is not TensorMap:
             raise ValueError("alpha must either be a float or a TensorMap")
 
         if sample_weight is None:
-            sample_weight = ones_like(y)
+            sample_weight = equistore.ones_like(y)
         elif type(sample_weight) is float:
-            sample_weight = multiply(ones_like(y), sample_weight)
+            sample_weight = equistore.multiply(equistore.ones_like(y), sample_weight)
         elif type(sample_weight) is not TensorMap:
             raise ValueError("sample_weight must either be a float or a TensorMap.")
 
@@ -334,7 +334,7 @@ class Ridge:
         :returns:
             predicted values
         """
-        return dot(X, self.weights)
+        return equistore.dot(X, self.weights)
 
     def forward(self, X: TensorMap) -> TensorMap:
         return self.predict(X)

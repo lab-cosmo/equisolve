@@ -12,7 +12,7 @@ from numpy.testing import assert_allclose
 
 from equisolve.numpy.preprocessing import StandardScaler
 
-from ..utils import random_single_block_no_components_tensor_map
+from ..utilities import random_single_block_no_components_tensor_map
 
 
 class TestStandardScaler:

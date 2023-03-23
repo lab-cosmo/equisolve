@@ -1,6 +1,12 @@
 ase
 matplotlib
 furo
-rascaline @ https://github.com/luthaf/rascaline/archive/3a7492e.zip
+# Since the equistore version hash in rascaline might be two old for equisolve,
+# we load a specific branch that has the same equistore hash as we are using
+# here.
+#
+# When we update the equistore hash here we ALSO have to update the hash
+# in the rascaline branch!
+rascaline @ https://github.com/luthaf/rascaline/archive/equisolve.zip
 sphinx >=4.4
 sphinx-gallery

@@ -2,7 +2,7 @@ from typing import List, Optional, Union
 
 import numpy as np
 from equistore import Labels, TensorBlock, TensorMap
-from equistore.operations._utils import _check_blocks, _check_maps
+from equistore.operations.equal_metadata import _check_blocks, _check_maps
 
 from ..utils import block_to_array, dict_to_tensor_map, tensor_map_to_dict
 
