@@ -5,14 +5,12 @@
 #
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
-from typing import List, Type
+from typing import Type
 
 import numpy as np
 import skmatter._selection
 from equistore import Labels, TensorBlock, TensorMap
 from equistore.operations import slice_block
-
-from .utils import dict_to_tensor_map, tensor_map_to_dict
 
 
 class GreedySelector:
@@ -57,7 +55,6 @@ class GreedySelector:
         if self._support is None:
             raise ValueError("No selections. Call fit method first.")
 
-        #return dict_to_tensor_map(self._support)
         return self._support
 
     def fit(self, X: TensorMap, warm_start: bool = False) -> None:
@@ -81,11 +78,9 @@ class GreedySelector:
             if self._selection_type == "feature":
                 samples = Labels.single()
                 properties = block.properties[mask]
-                values = np.array([]).reshape(-1, len(properties))
             elif self._selection_type == "sample":
                 samples = block.samples[mask]
                 properties = Labels.single()
-                values = np.array([]).reshape(len(samples), -1)
 
             blocks.append(
                 TensorBlock(
@@ -96,7 +91,6 @@ class GreedySelector:
                 )
             )
 
-        #self._support = tensor_map_to_dict(TensorMap(X.keys, blocks))
         self._support = TensorMap(X.keys, blocks)
 
         return self

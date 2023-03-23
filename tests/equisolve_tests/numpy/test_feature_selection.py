@@ -5,8 +5,6 @@
 #
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
-
-import numpy as np
 import equistore
 import pytest
 import skmatter.feature_selection
@@ -29,13 +27,13 @@ class TestSelection:
     def test_fit(self, X, selector_class, skmatter_selector_class):
         selector = selector_class(n_to_select=2)
         selector.fit(X)
-        support = selector.support[0].properties
+        support = selector.support[0].properties["properties"]
 
         skmatter_selector = skmatter_selector_class(n_to_select=2)
         skmatter_selector.fit(X[0].values)
         skmatter_support = skmatter_selector.get_support(indices=True)
 
-        assert_equal(np.flatten(support), skmatter_support)
+        assert_equal(support, skmatter_support)
 
     @pytest.mark.parametrize(
         "selector_class, skmatter_selector_class",

@@ -8,6 +8,5 @@ furo
 # When we update the equistore hash here we ALSO have to update the hash
 # in the rascaline branch!
 rascaline @ https://github.com/luthaf/rascaline/archive/equisolve.zip
-skmatter
 sphinx >=4.4
 sphinx-gallery

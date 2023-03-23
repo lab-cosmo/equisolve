@@ -5,8 +5,6 @@
 #
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
-
-
 import equistore
 import pytest
 import skmatter.sample_selection
@@ -29,11 +27,11 @@ class TestSelection:
     def test_fit(self, X, selector_class, skmatter_selector_class):
         selector = selector_class(n_to_select=2)
         selector.fit(X)
-        support = selector.selectors[X.keys[0]].get_support()
+        support = selector.support[0].samples["structure"]
 
         skmatter_selector = skmatter_selector_class(n_to_select=2)
         skmatter_selector.fit(X[0].values)
-        skmatter_support = skmatter_selector.get_support()
+        skmatter_support = skmatter_selector.get_support(indices=True)
 
         assert_equal(support, skmatter_support)
 
