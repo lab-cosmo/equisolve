@@ -15,9 +15,9 @@ We first import all necessary packages.
 """
 
 import ase.io
+import equistore
 import numpy as np
 from equistore import Labels
-from equistore.operations import multiply, ones_like, slice, sum_over_samples
 from rascaline import SoapPowerSpectrum
 
 from equisolve.numpy.models.linear_model import Ridge
@@ -89,7 +89,7 @@ descriptor = descriptor.keys_to_properties(["species_neighbor_1", "species_neigh
 # structure. However, our energies as target data is per structure only.
 # Therefore, we sum the properties of each center atom per structure.
 
-X = sum_over_samples(descriptor, ["center", "species_center"])
+X = equistore.sum_over_samples(descriptor, ["center", "species_center"])
 
 # %%
 #
@@ -145,8 +145,8 @@ clf = Ridge(parameter_keys=["values", "positions"])
 # without standardizing the features and values the regulerizer strength
 # depends on the system and has to be taken carefully and usually optimized.
 
-alpha = ones_like(X)
-alpha = multiply(alpha, 1e-5)
+alpha = equistore.ones_like(X)
+alpha = equistore.multiply(alpha, 1e-5)
 
 # %%
 #
@@ -155,14 +155,14 @@ alpha = multiply(alpha, 1e-5)
 # regulerized in the same way in a linear model.
 #
 # We remove all sample except the 0th one by using the
-# :func:`equistore.operations.slice`.
+# :func:`equistore.slice`.
 
 samples = Labels(
     names=["structure"],
     values=np.array([(0,)]),
 )
 
-alpha = slice(alpha, samples=samples)
+alpha = equistore.slice(alpha, samples=samples)
 
 print(alpha)
 
@@ -177,8 +177,8 @@ print(alpha)
 # Next we create a sample weighting :class:`equistiore.TensorMap` that weights
 # energies five times more then the forces.
 
-sw = ones_like(y)
-sw = multiply(sw, 5.0)
+sw = equistore.ones_like(y)
+sw = equistore.multiply(sw, 5.0)
 
 # %%
 #

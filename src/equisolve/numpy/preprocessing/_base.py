@@ -2,12 +2,37 @@ from typing import List, Optional, Union
 
 import numpy as np
 from equistore import Labels, TensorBlock, TensorMap
-from equistore.operations._utils import _check_blocks, _check_maps
+from equistore.operations.equal_metadata import _check_blocks, _check_maps
 
 from ..utils import block_to_array, dict_to_tensor_map, tensor_map_to_dict
 
 
 class StandardScaler:
+    """Standardize features by removing the mean and scaling to unit variance.
+
+    :param parameter_keys:
+        Parameters to perform the standardization for.
+        Examples are ``"values"``, ``"positions"``,
+        ``"cell"`` or a combination of these.
+    :param with_mean:
+        If ``True``, center the data before scaling. If ``False``,
+        keep the mean intact. Because all operations are consistent
+        wrt. to the derivative, the mean is only taken from the values,
+        but not from the gradients, since ∇(X - mean) = ∇X
+    :param with_std:
+        If ``True``, scale the data to unit variance. If ``False``,
+        keep the variance intact
+    :param column_wise:
+        If True, normalize each column separately. If False, normalize the whole
+        matrix with respect to its total variance.
+    :param rtol:
+        The relative tolerance for the optimization: variance is
+        considered zero when it is less than abs(mean) * rtol + atol.
+    :param atol:
+        The relative tolerance for the optimization: variance is
+        considered zero when it is less than abs(mean) * rtol + atol.
+    """
+
     def __init__(
         self,
         parameter_keys: Union[List[str], str],
@@ -67,24 +92,15 @@ class StandardScaler:
                 components=[],
                 properties=Labels.single(),
             )
-            n_properties_block = TensorBlock(
-                values=np.array([len(X_block.properties)], dtype=np.int32).reshape(
-                    1, 1
-                ),
-                samples=Labels.single(),
-                components=[],
-                properties=Labels.single(),
-            )
+
         # TODO use this in transform function to do a check
         self.n_components_ = TensorMap(X.keys, [n_components_block])
-        self.n_properties_ = TensorMap(X.keys, [n_properties_block])
+        self.n_properties_ = len(X_block.properties)
 
         mean_blocks = []
         scale_blocks = []
 
-        # this is how it will look like when we replace with equistore oprations
-        # if self.with_mean:
-        #    self.mean_ = equistore.operations.mean_over_samples(X, X.samples_names)
+        # replace with equistore oprations see issue #18
         for key, X_block in X:
             # if values not in parameter_keys, we create empty tensor block to
             # attach gradients
@@ -98,9 +114,7 @@ class StandardScaler:
                 if self.with_mean:
                     mean_values = np.average(X_mat, weights=sample_weights, axis=0)
                 else:
-                    mean_values = np.zeros(
-                        self.n_properties_.block(key).values.flatten()
-                    )
+                    mean_values = np.zeros(self.n_properties_)
 
                 mean_block = TensorBlock(
                     values=mean_values.reshape((1,) + mean_values.shape),
@@ -154,26 +168,18 @@ class StandardScaler:
                     properties=Labels.single(),
                 )
 
-            for parameter in self.parameter_keys:
-                if parameter == "values":
-                    continue
-
+            for parameter in X_block.gradients_list():
                 X_mat = block_to_array(X_block, [parameter])
                 # X_gradient = X_block.gradient(parameter)
 
                 if sample_weights is not None:
                     sw_block = sample_weights.block(key)
                     sample_weights = block_to_array(sw_block, [parameter])
-                if self.with_mean:
+                if self.with_mean and (parameter in self.parameter_keys):
                     mean_values = np.average(X_mat, weights=sample_weights, axis=0)
                     mean_values = mean_values.reshape((1, 1) + mean_values.shape)
                 else:
-                    n_properties = (
-                        self.n_properties_.block(key)
-                        .gradient(parameter)
-                        .data.flatten()[0]
-                    )
-                    mean_values = np.zeros((1, 1, n_properties))
+                    mean_values = np.zeros((1, 1, self.n_properties_))
 
                 mean_block.add_gradient(
                     parameter,
@@ -182,7 +188,7 @@ class StandardScaler:
                     [Labels.single()],
                 )
 
-                if self.with_std:
+                if self.with_std and (parameter in self.parameter_keys):
                     X_mean = np.average(X_mat, weights=sample_weights, axis=0)
                     var = np.average((X_mat - X_mean) ** 2, axis=0)
 
@@ -256,9 +262,7 @@ class StandardScaler:
                 properties=X_block.properties,
             )
 
-            for parameter in self.parameter_keys:
-                if parameter == "values":
-                    continue
+            for parameter in X_block.gradients_list():
                 X_gradient = X_block.gradient(parameter)
 
                 block.add_gradient(
@@ -308,9 +312,7 @@ class StandardScaler:
                 properties=X_block.properties,
             )
 
-            for parameter in self.parameter_keys:
-                if parameter == "values":
-                    continue
+            for parameter in X_block.gradients_list():
                 X_gradient = X_block.gradient(parameter)
 
                 block.add_gradient(

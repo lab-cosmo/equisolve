@@ -23,11 +23,13 @@ def block_to_array(block: TensorBlock, parameter_keys: List[str]) -> np.ndarray:
 
     Gradient data will be flattened.
 
-    :param block: :class:`equistore.TensorBlock` for the extraction
-    :param value_keys: List of keys specifying the parameter of the block which will be
-                       extracted.
-    :returns M: :class:`numpy.ndarray` of shape (n, m) where m is the number of
-                properties in the block.
+    :param block:
+        :class:`equistore.TensorBlock` for the extraction
+    :param value_keys:
+        List of keys specifying the parameter of the block which will be extracted.
+    :returns M:
+        :class:`numpy.ndarray` of shape (n, m) where m is the number of properties in
+        the block.
     """
     M = []
     for parameter in parameter_keys:
@@ -48,10 +50,15 @@ def matrix_to_block(
     is `'property' and name of the sample labels are `'sample'`. The block has
     no components.
 
-    :param a: 2d numpy array for Blocks values
-    :param sample_name: name of the TensorBlocks' samples
-    :param property_name: name of the TensorMaps' properties
-    :returns block: block with filled values
+    :param a:
+        2d numpy array for Blocks values
+    :param sample_name:
+        name of the TensorBlocks' samples
+    :param property_name:
+        name of the TensorMaps' properties
+
+    :returns block:
+        block with filled values
 
     Example:
     >>> a = np.zeros([2,2])
@@ -85,9 +92,13 @@ def tensor_to_tensormap(a: np.ndarray, key_name: str = "keys") -> TensorMap:
     The name of the property labels in each block is `'property' and name of the sample
     labels is `'sample'`. The blocks have no components.
 
-    :param a: 3d numpy array for the block of the TensorMap values
-    :param key_name: name of the TensorMaps' keys
-    :returns: TensorMap with filled values
+    :param a:
+        3d numpy array for the block of the TensorMap values
+    :param key_name:
+        name of the TensorMaps' keys
+
+    :returns:
+        TensorMap with filled values
 
 
     Example:
@@ -114,9 +125,12 @@ def tensor_map_to_dict(tensor_map: TensorMap):
          https://github.com/lab-cosmo/equistore/issues/94
          is merged
 
-    :param tensor_map: :class:`equistore.TensorMap` for the transform
-    :returns tensor_map_dict: :class:`dict` of :class:`numpy.ndarray`,
-                              consistent with equistore.io.save format
+    :param tensor_map:
+        :class:`equistore.TensorMap` for the transform
+
+    :returns tensor_map_dict:
+        :class:`dict` of :class:`numpy.ndarray`, consistent with equistore.io.save
+        format
     """
     tmp_filename = tempfile.mktemp() + ".npz"
     save(tmp_filename, tensor_map)
@@ -132,9 +146,12 @@ def dict_to_tensor_map(tensor_map_dict: dict):
          https://github.com/lab-cosmo/equistore/issues/94
          is merged
 
-    :param  tensor_map: :class:`dict` of :class:`numpy.ndarray`,
-                              consistent with equistore.io.save format
-    :returns tensor_map_dict: :class:`equistore.TensorMap` for the transform
+    :param tensor_map:
+        :class:`dict` of :class:`numpy.ndarray`,
+        consistent with equistore.io.save format
+
+    :returns tensor_map_dict:
+        :class:`equistore.TensorMap` for the transform
     """
     tmp_filename = tempfile.mktemp() + ".npz"
     np.savez(tmp_filename, **tensor_map_dict)

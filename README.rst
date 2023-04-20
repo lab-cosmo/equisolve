@@ -13,7 +13,7 @@ models using them.
 
 For details, tutorials, and examples, please have a look at our `documentation`_.
 
-.. _`documentation`: https://luthaf.fr/rascaline/index.html
+.. _`documentation`: https://lab-cosmo.github.io/equisolve/latest/
 
 .. |test| image:: https://github.com/lab-cosmo/equisolve/actions/workflows/tests.yml/badge.svg
    :alt: Github Actions Tests Job Status
@@ -21,4 +21,4 @@ For details, tutorials, and examples, please have a look at our `documentation`_
 
 .. |docs| image:: https://img.shields.io/badge/documentation-latest-sucess
    :alt: Documentation
-   :target: https://github.com/lab-cosmo/equisolve
+   :target: https://lab-cosmo.github.io/equisolve/latest/

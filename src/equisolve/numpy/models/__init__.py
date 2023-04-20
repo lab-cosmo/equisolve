@@ -5,6 +5,12 @@
 #
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
+"""Classes to build models from an class:`equistore.TensorMap`.
+
+Model classes listed here use are based on Numpy. Classes based
+on torch will be added in the future.
+"""
+
 
 from .linear_model import Ridge
 
