@@ -251,6 +251,14 @@ class TestRidge:
         ridge_class = self.equisolve_solver_from_numpy_arrays(
             X, y, property_w, sample_w, solver
         )
+<<<<<<< HEAD:tests/numpy/models/test_linear_model.py
+<<<<<<< HEAD
+        w_solver = ridge_class.coef.block().values[0, :]
+=======
+        w_solver = ridge_class.weights.block().values[0, :]
+>>>>>>> main
+        w_exact_with_regularization = self.numpy_solver(X, y, sample_w, property_w)
+=======
         # checks if certain solvers are used if auto solver
         # is use
         if solver == "auto":
@@ -258,6 +266,7 @@ class TestRidge:
 
         w_solver = ridge_class.weights.block().values[0, :]
         w_ref = numpy_solver(X, y, sample_w, property_w)
+>>>>>>> main:tests/equisolve_tests/numpy/models/linear_model.py
 
         # Check that the two approaches yield the same result
         assert_allclose(w_solver, w_ref, atol=1e-13, rtol=1e-8)
@@ -354,9 +363,16 @@ class TestRidge:
         ridge_class = self.equisolve_solver_from_numpy_arrays(
             X, y, property_w, sample_w, solver
         )
+<<<<<<< HEAD:tests/numpy/models/test_linear_model.py
+<<<<<<< HEAD
+        w_solver = ridge_class.coef.block().values[0, :]
+=======
+=======
         if solver == "auto":
             assert_equal(ridge_class._used_auto_solver, "cholesky_dual")
+>>>>>>> main:tests/equisolve_tests/numpy/models/linear_model.py
         w_solver = ridge_class.weights.block().values[0, :]
+>>>>>>> main
 
         # Generate new data
         X_validation = self.rng.normal(mean, 1, size=(50, num_properties))
@@ -395,7 +411,11 @@ class TestRidge:
         ridge_class = self.equisolve_solver_from_numpy_arrays(
             X, y, property_w, sample_w, solver
         )
+<<<<<<< HEAD
+        w_solver = ridge_class.coef.block().values[0, :]
+=======
         w_solver = ridge_class.weights.block().values[0, :]
+>>>>>>> main
         w_zeros = np.zeros((num_properties,))
 
         # Check that the two approaches yield the same result
@@ -572,7 +592,15 @@ class TestRidge:
         clf.fit(X=X, y=y, alpha=alpha)
 
         assert_allclose(
+<<<<<<< HEAD:tests/numpy/models/test_linear_model.py
+<<<<<<< HEAD
+            clf.coef.block().values, w_exact.reshape(1, -1), atol=1e-15, rtol=1e-8
+=======
+            clf.weights.block().values, w_exact.reshape(1, -1), atol=1e-15, rtol=1e-8
+>>>>>>> main
+=======
             clf.weights.block().values, w_exact.reshape(1, -1), atol=1e-15, rtol=1e-10
+>>>>>>> main:tests/equisolve_tests/numpy/models/linear_model.py
         )
 
         # Test prediction

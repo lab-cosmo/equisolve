@@ -39,6 +39,8 @@ class Ridge:
         self,
         parameter_keys: Union[List[str], str] = None,
     ) -> None:
+        if parameter_keys is None:
+            self.paramater_keys = ["values", "positions"]
         if type(parameter_keys) not in (list, tuple, np.ndarray):
             self.parameter_keys = [parameter_keys]
         else:
@@ -354,5 +356,7 @@ class Ridge:
             :math:`\mathrm{RMSE}` for each block in ``self.predict(X)`` with respecy to
             `y`.
         """
+        if parameter_keys is None:
+            parameter_keys = self.parameter_keys
         y_pred = self.predict(X)
-        return rmse(y, y_pred, parameter_key)
+        return np.mean([rmse(y, y_pred, parameter_key) for parameter_key in parameter_keys])

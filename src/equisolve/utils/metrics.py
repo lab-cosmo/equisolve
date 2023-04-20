@@ -14,7 +14,7 @@ from equistore import TensorMap
 from equistore.operations.equal_metadata import _check_maps
 
 
-def rmse(y_true: TensorMap, y_pred: TensorMap, parameter_key: str) -> List[float]:
+def rmse(y_true: TensorMap, y_pred: TensorMap, parameter_key: str) -> float:
     """Mean squared error regression loss.
 
     :param y_true: Ground truth (correct) target values.
@@ -45,4 +45,4 @@ def rmse(y_true: TensorMap, y_pred: TensorMap, parameter_key: str) -> List[float
 
         loss.append(np.sqrt(np.mean((y_pred_values - y_true_values) ** 2)))
 
-    return loss
+    return loss[0]
