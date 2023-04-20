@@ -12,7 +12,7 @@ from typing import List, Set, Dict, Tuple, Union
 from equistore import TensorMap
 from equistore.operations import join, mean_over_samples, sum_over_samples
 
-from rascaline import Composition, SoapRadialSpectrum, SoapPowerSpectrum
+from rascaline import AtomicComposition, SoapRadialSpectrum, SoapPowerSpectrum
 
 from .base import EquiScriptBase
 
@@ -68,7 +68,7 @@ class MultiSpectraScript(EquiScriptBase):
 
         descriptors = {}
         if "Composition" in self._hypers.keys():
-            descriptors["Composition"] = Composition().compute(**kwargs)
+            descriptors["Composition"] = AtomicComposition(**self._hypers["Composition"]).compute(**kwargs)
         if "SoapRadialSpectrum" in self._hypers:
             descriptors["SoapRadialSpectrum"] = SoapRadialSpectrum(
                 **self._hypers["SoapRadialSpectrum"]
@@ -102,25 +102,25 @@ class MultiSpectraScript(EquiScriptBase):
         return X_moved
 
     def _aggregate(self, X: Dict[str, TensorMap]) -> Dict[str, TensorMap]:
-        if self._feature_aggregation == "sum":
+        if self.feature_aggregation == "sum":
             aggregation_function  = sum_over_samples
-        elif self._feature_aggregation == "mean":
+        elif self.feature_aggregation == "mean":
             aggregation_function = mean_over_samples
         else:
             raise ValueError("Invalid aggregation_function.") # TODO make error message nice
 
         if "Composition" in X.keys():
-            samples_names = ["center"]
-            X["Composition"] = aggregation_function(X["Composition"], samples_names=["center"])
+            sample_names = ["center"]
+            X["Composition"] = aggregation_function(X["Composition"], sample_names=sample_names)
         if "SoapRadialSpectrum" in X.keys():
-            samples_names = ["center", "species_center"]
+            sample_names = ["center", "species_center"]
             X["SoapRadialSpectrum"] = aggregation_function(
-                X["SoapRadialSpectrum"], samples_names=samples_names
+                X["SoapRadialSpectrum"], sample_names=sample_names
             )
         if "SoapPowerSpectrum" in X.keys():
-            samples_names = ["center", "species_center"]
+            sample_names = ["center", "species_center"]
             X["SoapPowerSpectrum"] = aggregation_function(
-                X["SoapPowerSpectrum"], samples_names=samples_names
+                X["SoapPowerSpectrum"], sample_names=sample_names
             )
         return X
 

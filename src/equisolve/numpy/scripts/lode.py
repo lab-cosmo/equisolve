@@ -11,7 +11,7 @@ from typing import List, Set, Tuple
 from equistore import TensorMap
 from equistore.operations import join, mean_over_samples, sum_over_samples
 
-from rascaline import Composition, LodeSphericalExpansion, SphericalExpansion
+from rascaline import AtomicComposition, LodeSphericalExpansion, SphericalExpansion
 
 from .base import EquiScriptBase
 

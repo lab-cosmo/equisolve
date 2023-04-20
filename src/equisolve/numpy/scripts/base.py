@@ -103,10 +103,10 @@ class EquiScriptBase(metaclass=ABCMeta):
             if isinstance(self.transformer_X, list):
                 if len(self.transformer_X) != len(X):
                     raise ValueError(f"List of transformers and list of descriptors have different length {len(self.transformer_X)} != {len(X)}")
-                self._transformer_X = deepcopy(self.transformer_X)
+                self.transformer_X = deepcopy(self.transformer_X)
                 for i, (descriptor_key, Xi) in enumerate(X.items()):
-                    self._transformer_X.append(
-                        self._transformer_X[i].fit(Xi, **kwargs["transformer_X"])
+                    self.transformer_X.append(
+                        self.transformer_X[i].fit(Xi, **kwargs["transformer_X"])
                     )
             else:
                 self._transformer_X = []
@@ -136,9 +136,9 @@ class EquiScriptBase(metaclass=ABCMeta):
 
         # TODO move to check and set?
         if self.estimator is None:
-            self._estimator = None
+            self.estimator = None
         else:
-            self._estimator = deepcopy(self.estimator).fit(X, y, **kwargs["estimator"])
+            self.estimator = deepcopy(self.estimator).fit(X, y, **kwargs["estimator"])
 
     def forward(self, X: Dict[str, TensorMap]) -> TensorMap:
         """TODO"""
@@ -159,10 +159,10 @@ class EquiScriptBase(metaclass=ABCMeta):
 
         X = self._join(X)
 
-        if self._estimator is None:
+        if self.estimator is None:
             return X
         else:
-            y_pred = self._estimator.predict(X)
+            y_pred = self.estimator.predict(X)
             if self._transformer_y is not None:
                 y_pred = self._transformer_y.inverse_transform(y_pred)
             return y_pred
@@ -170,12 +170,12 @@ class EquiScriptBase(metaclass=ABCMeta):
     def score(self, X: Dict[str, TensorMap], y) -> List[float]:
         """TODO"""
         # TODO(low-prio) add support for more error functions
-        if self._estimator is None:
+        if self.estimator is None:
             raise ValueError("Cannot use score function without setting an estimator.")
 
         y_pred =  self.forward(X)
 
-        return np.mean([rmse(y, y_pred, parameter_key) for parameter_key in self._estimator.parameter_keys])
+        return np.mean([rmse(y, y_pred, parameter_key) for parameter_key in self.estimator.parameter_keys])
 
 
     def _set_and_check_fit_parameters(self) -> None:
