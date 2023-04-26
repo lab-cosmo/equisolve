@@ -293,7 +293,7 @@ def check_values(
     Checks that the block values have been sliced correctly.
     """
     for i, indices in enumerate(target_indices):
-        ref_tensor = equistore.slice(original_tensor, samples=indices)
+        ref_tensor = equistore.slice(original_tensor, axis="samples", labels=indices)
         for key, ref_block in ref_tensor:
             check_block = split_tensors[0][i][key]
             if not np.all(ref_block.values == check_block.values):

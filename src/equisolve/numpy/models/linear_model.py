@@ -286,7 +286,7 @@ class Ridge:
                 values=np.zeros([1, len(X.sample_names)], dtype=int),
             )
 
-            alpha_tensor = equistore.slice(alpha_tensor, samples=samples)
+            alpha_tensor = equistore.slice(alpha_tensor, axis="samples", labels=samples)
             alpha = equistore.multiply(alpha_tensor, alpha)
         elif type(alpha) is not TensorMap:
             raise ValueError("alpha must either be a float or a TensorMap")

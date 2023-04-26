@@ -162,7 +162,7 @@ samples = Labels(
     values=np.array([(0,)]),
 )
 
-alpha = equistore.slice(alpha, samples=samples)
+alpha = equistore.slice(alpha, axis="samples", labels=samples)
 
 print(alpha)
 
