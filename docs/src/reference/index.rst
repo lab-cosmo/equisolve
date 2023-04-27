@@ -13,5 +13,6 @@ recipes how to stack the functions toegther you might take a look at the
     :maxdepth: 2
 
     preprocessing
+    selection/index.rst
     models
     utils/index

@@ -30,6 +30,7 @@ version = equisolve.__version__
 extensions = [
     'sphinx.ext.autodoc', # import the modules you are documenting
     'sphinx.ext.intersphinx', # generate links to the documentation of objects in external projects
+    "sphinx.ext.viewcode", # add links to highlighted source code
     "sphinx_gallery.gen_gallery", # provides a source parser for *.ipynb files
 ]
 
@@ -190,6 +191,7 @@ intersphinx_mapping = {
     "equistore": ("https://lab-cosmo.github.io/equistore/latest/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "python": ("https://docs.python.org/3", None),
+    "skmatter": ("https://scikit-matter.readthedocs.io/en/latest/", None),
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,

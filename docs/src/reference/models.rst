@@ -1,6 +1,5 @@
-Regression Models
+Regression models
 =================
 
 .. automodule:: equisolve.numpy.models
     :members:
-    :show-inheritance:
