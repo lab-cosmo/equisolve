@@ -23,12 +23,6 @@ class NumpyModule(metaclass=ABCMeta):
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
 
-    #def __setattr__(self, name, value):
-    #    # TODO used to keep track of the parameters that
-    #           have been set up
-    #    # https://stackoverflow.com/a/54994818
-    #    return
-
     def state_dict(self) -> OrderedDict:
         """
         All required parameteres to initialize a fitted module

@@ -364,6 +364,7 @@ class NumpyRidge(_Ridge, NumpyModule):
             self,
             parameter_keys: Union[List[str], str] = None,
         ) -> None:
+        NumpyModule.__init__(self)
         _Ridge.__init__(self, parameter_keys)
 
 if HAS_TORCH:
@@ -373,8 +374,8 @@ if HAS_TORCH:
                 self,
                 parameter_keys: Union[List[str], str] = None,
             ) -> None:
-            _Ridge.__init__(self, parameter_keys)
             torch.nn.Module.__init__(self)
+            _Ridge.__init__(self, parameter_keys)
 
     Ridge = TorchRidge
 else:
