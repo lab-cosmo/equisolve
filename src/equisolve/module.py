@@ -18,7 +18,7 @@ import sys
 class NumpyModule(metaclass=ABCMeta):
     @abstractmethod
     def forward(self, *args, **kwargs):
-        return
+        pass
 
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
@@ -63,7 +63,8 @@ except:
 # We want to allow people to switch to a torch model if needed
 # (to use the TorchScript for low level integration into MD code).
 # For that we need both class definitions (numpy and torch)
-# so we can convert a NumpyModule to a torch Module
+# so we can convert classes inhererting from NumpyModule to classes
+# inheriting from torch Module
 # the use case I see is that you did not work with torch
 # then you have a class based on NumpyModule, but you need
 # a class based on TorchModule, so we provide an utility function
@@ -86,59 +87,38 @@ NUMPY_TO_TORCH_MODULE = {}
 #            and that is super hacky https://stackoverflow.com/a/9541560
 
 # PR COMMENT all modules that support both would need to be build like this
-def estimator_module_factory(base_class, name):
-    class _EstimatorModule(base_class, metaclass=ABCMeta):
-        def __init__(self):
-            super().__init__()
-
-        def forward(self, X: TensorMap):
-            return self.predict(X)
-
-        @abstractmethod
-        def fit(self, X: TensorMap, y: TensorMap) -> base_class:
-            return
-
-        @abstractmethod
-        def predict(self, X: TensorMap) -> TensorMap:
-            return
-
-        @abstractmethod
-        def score(self, X: TensorMap, y: TensorMap) -> TensorMap:
-            return
-
-        def fit_score(self, X: TensorMap, y: TensorMap = None) -> TensorMap:
-            self.fit(X, y)
-            return self.score(X, y)
-
-    # PR COMMENT: this is kind of the idea 
-    #             this can be solved more Vnicely, currently the class stored in
-    #             equisolve.module.estimator_module_factory.<locals>.EstimatorModule
-    #             we can replace https://stackoverflow.com/q/681953 
-    _EstimatorModule.__name__ = name
-    _EstimatorModule.__qualname__ = name
-    return _EstimatorModule
-
-EstimatorNumpyModule = estimator_module_factory(NumpyModule, "EstimatorModuleNumpy")
-if HAS_TORCH:
-    EstimatorTorchModule = estimator_module_factory(torch.nn.Module, "EstimatorModuleTorch")
-    NUMPY_TO_TORCH_MODULE["EstimatorNumpyModule"] = EstimatorTorchModule
-    # this is just reference to the default module type
-    EstimatorModule = EstimatorTorchModule
-else:
-    # this is just reference to the default module type
-    EstimatorModule = EstimatorNumpyModule
 
 
-# PR COMMENT: for now I did not adapt the transformer module
-#             it is equivalent, but not worth the effort if we dont follow approach
-TTransformerModule = TypeVar("TTransformerModule", bound="TransformerModule")
+T_Estimator = TypeVar("_Estimator", bound="_Estimator")
+class _Estimator(metaclass=ABCMeta):
+    def forward(self, X: TensorMap):
+        return self.predict(X)
 
-class TransformerModule(Module, metaclass=ABCMeta):
+    @abstractmethod
+    def fit(self, X: TensorMap, y: TensorMap) -> T_Estimator:
+        return
+
+    @abstractmethod
+    def predict(self, X: TensorMap) -> TensorMap:
+        return
+
+    @abstractmethod
+    def score(self, X: TensorMap, y: TensorMap) -> TensorMap:
+        return
+
+    def fit_score(self, X: TensorMap, y: TensorMap = None) -> TensorMap:
+        self.fit(X, y)
+        return self.score(X, y)
+
+
+T_Transformer = TypeVar("_Transformer", bound="_Transformer")
+
+class _Transformer(metaclass=ABCMeta):
     def forward(self, X: TensorMap):
         return self.transform(X)
 
     @abstractmethod
-    def fit(self, X: TensorMap, y: TensorMap = None) -> TTransformerModule:
+    def fit(self, X: TensorMap, y: TensorMap = None) -> T_Transformer :
         return
 
     @abstractmethod
