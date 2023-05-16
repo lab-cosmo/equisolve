@@ -140,6 +140,26 @@ class EquiScriptBase(metaclass=ABCMeta):
         else:
             self.estimator = deepcopy(self.estimator).fit(X, y, **kwargs["estimator"])
 
+    def compute_features(self, X: Dict[str, TensorMap]) -> TensorMap:
+        """Computes the feature that are used to fit the model"""
+        # TODO check if is fitted
+
+        X = self._move(X)
+        X = self._aggregate(X)
+
+        if self._transformer_X is not None:
+            X = {descriptor_key:
+                self._transformer_X[i].transform(Xi)
+                    for i, (descriptor_key, Xi) in enumerate(X.items())
+            }
+        # COMMENT we cannot do this because the join funciton also aggregates at tho moment
+        #         maybe we can split this better
+        #if len(X) > 1:
+        #    # COMMENT I removed the error because it should be thrown in the _join function right?
+
+        X = self._join(X)
+        return X
+
     def forward(self, X: Dict[str, TensorMap]) -> TensorMap:
         """TODO"""
         # TODO check if is fitted
@@ -167,15 +187,16 @@ class EquiScriptBase(metaclass=ABCMeta):
                 y_pred = self._transformer_y.inverse_transform(y_pred)
             return y_pred
 
-    def score(self, X: Dict[str, TensorMap], y) -> List[float]:
+    def score(self, X: Dict[str, TensorMap], y: TensorMap, parameter_keys: List[str] = None) -> List[float]:
         """TODO"""
         # TODO(low-prio) add support for more error functions
         if self.estimator is None:
             raise ValueError("Cannot use score function without setting an estimator.")
 
         y_pred =  self.forward(X)
-
-        return np.mean([rmse(y, y_pred, parameter_key) for parameter_key in self.estimator.parameter_keys])
+        if parameter_keys is None:
+            parameter_keys = self.estimator.parameter_keys
+        return np.mean([rmse(y, y_pred, parameter_key) for parameter_key in parameter_keys])
 
 
     def _set_and_check_fit_parameters(self) -> None:

@@ -283,9 +283,12 @@ class Ridge:
         if type(alpha) is float:
             alpha_tensor = equistore.ones_like(X)
 
+            # We slice the first sample to just obtain the first sample in each block
+            # Assumes that the first sample in the first block is present in all blocks
+            # otherwise this results in an error
             samples = Labels(
                 names=X.sample_names,
-                values=np.zeros([1, len(X.sample_names)], dtype=int),
+                values=np.array([[i for i in X.block(0).samples[0]]], dtype=int),
             )
 
             alpha_tensor = equistore.slice(alpha_tensor, samples=samples)
@@ -341,7 +344,7 @@ class Ridge:
     def forward(self, X: TensorMap) -> TensorMap:
         return self.predict(X)
 
-    def score(self, X: TensorMap, y: TensorMap, parameter_key: str) -> float:
+    def score(self, X: TensorMap, y: TensorMap, parameter_keys: str) -> float:
         r"""Return the weights of determination of the prediction.
 
         :param X:
