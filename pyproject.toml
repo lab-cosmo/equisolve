@@ -7,6 +7,57 @@ requires = [
     "wheel>=0.36"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "equisolve"
+description = "A package tasked with taking equistore objects and computing machine learning models using them."
+dynamic = ["version"]
+authors = [{name = "the equisolve development team"}]
+license = {text = "BSD-3-Clause"}
+readme = "README.rst"
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+keywords = [
+    "Science",
+    "Machine Learning"
+]
+
+requires-python = ">=3.7"
+
+dependencies = [
+    "equistore @ https://github.com/lab-cosmo/equistore/archive/master.zip",
+    "numpy",
+    "scipy",
+    "skmatter"
+]
+
+[project.urls]
+homepage = "https://lab-cosmo.github.io/equisolve/latest/"
+documentation = "https://lab-cosmo.github.io/equisolve/latest/"
+repository = "https://github.com/lab-cosmo/equisolve"
+issue_tracker = "https://github.com/lab-cosmo/equisolve/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 # configuration for the isort module
 [tool.isort]
 profile = "black"
