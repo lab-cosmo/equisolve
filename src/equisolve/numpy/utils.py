@@ -18,10 +18,8 @@ from equistore.io import load, save
 def block_to_array(block: TensorBlock, parameter_keys: List[str]) -> np.ndarray:
     """Extract parts of a :class:`equistore.TensorBlock` into a array.
 
-    Values of each part of the block will be stacked along the 'sample' dimension.
-    This means that the length of the properties is unchanged.
-
-    Gradient data will be flattened.
+    All components will be stacked along the rows / "sample"-dimension.
+    This means that the number of coulums / "property"-dimension is unchanged.
 
     :param block:
         :class:`equistore.TensorBlock` for the extraction
@@ -30,14 +28,19 @@ def block_to_array(block: TensorBlock, parameter_keys: List[str]) -> np.ndarray:
     :returns M:
         :class:`numpy.ndarray` of shape (n, m) where m is the number of properties in
         the block.
+
+    Note
+    ----
+    This function is used for creating the X and the y for Linear models. It may not
+    work for Kernel models.
     """
     M = []
     for parameter in parameter_keys:
         if parameter == "values":
-            M.append(block.values)
+            data = block.values
         else:
             data = block.gradient(parameter).data
-            M.append(data.reshape(np.prod(data.shape[:-1]), data.shape[-1]))
+        M.append(data.reshape(np.prod(data.shape[:-1]), data.shape[-1]))
     return np.vstack(M)
 
 

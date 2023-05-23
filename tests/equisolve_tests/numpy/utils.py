@@ -64,3 +64,25 @@ class Testblock_to_array:
                 [values, gradient_data.reshape(self.n_samples * 3, self.n_properties)]
             ),
         )
+
+    def test_components(self, values):
+        properties = Labels(["property"], np.arange(self.n_properties).reshape(-1, 1))
+        samples = Labels(["sample"], np.arange(self.n_samples).reshape(-1, 1))
+
+        values = np.arange(self.n_samples * self.n_properties**2).reshape(
+            self.n_samples, self.n_properties, self.n_properties
+        )
+
+        block = TensorBlock(
+            values=values,
+            samples=samples,
+            components=[properties],
+            properties=properties,
+        )
+
+        block_mat = block_to_array(block, parameter_keys=["values"])
+
+        assert_equal(
+            block_mat,
+            values.reshape(self.n_samples * self.n_properties, self.n_properties),
+        )

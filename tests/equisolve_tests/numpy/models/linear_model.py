@@ -586,42 +586,34 @@ class TestRidge:
                 y.block().gradient("positions").data,
             )
 
-    @pytest.mark.parametrize("components", [(True, False), (False, True)])
-    def test_error_components(self, components):
-        """Test error raise if X or y got components."""
-        if components[0]:
-            values_X = np.ones([1, 1, 1])
-        else:
-            values_X = np.ones([1, 1])
-
-        if components[1]:
-            values_y = np.ones([1, 1, 1])
-        else:
-            values_y = np.ones([1, 1])
+    def test_components(self):
+        """Test regressiosn with components."""
 
         properties = Labels(["property"], np.arange(1).reshape(-1, 1))
         samples = Labels(["sample"], np.arange(1).reshape(-1, 1))
 
         X_block = TensorBlock(
-            values=values_X,
+            values=np.ones([1, 1, 1]),
             samples=samples,
-            components=components[0] * [properties],
+            components=[properties],
             properties=properties,
         )
 
         X = TensorMap(Labels.single(), [X_block])
 
         y_block = TensorBlock(
-            values=values_y,
+            values=np.ones([1, 1, 1]),
             samples=samples,
-            components=components[1] * [properties],
+            components=[properties],
             properties=properties,
         )
         y = TensorMap(Labels.single(), [y_block])
 
         clf = Ridge(parameter_keys="values")
-        with pytest.raises(ValueError, match="contains components"):
-            clf.fit(X=X, y=y)
+        clf.fit(X=X, y=y)
+
+        assert clf.weights.components_names == [("property",)]
+        assert clf.weights[0].values.shape == (1, 1, 1)
 
     @pytest.mark.parametrize(
         "n_blocks", [[2, 1, 1, 1], [1, 2, 1, 1], [1, 1, 2, 1], [1, 1, 1, 2]]
@@ -670,24 +662,6 @@ class TestRidge:
 
         clf = Ridge(parameter_keys="values")
         with pytest.raises(ValueError, match="samples"):
-            clf.fit(X=X, y=y, alpha=alpha, sample_weight=sw)
-
-    @pytest.mark.parametrize("shapes", [(2, 1, 1), (1, 2, 1), (1, 1, 2)])
-    def test_error_shape(self, shapes):
-        """Test error raise if y, alpha & sw have more than 1 dimension."""
-
-        X_arr = self.rng.random([1, self.num_targets[0], self.num_properties[0]])
-        y_arr = self.rng.random([1, self.num_targets[0], shapes[0]])
-        alpha_arr = np.ones([1, shapes[1], self.num_properties[0]])
-        sw_arr = np.ones([1, self.num_targets[0], shapes[2]])
-
-        X = tensor_to_tensormap(X_arr)
-        y = tensor_to_tensormap(y_arr)
-        alpha = tensor_to_tensormap(alpha_arr)
-        sw = tensor_to_tensormap(sw_arr)
-
-        clf = Ridge(parameter_keys="values")
-        with pytest.raises(ValueError, match="Only one"):
             clf.fit(X=X, y=y, alpha=alpha, sample_weight=sw)
 
     def test_error_no_weights(self):
