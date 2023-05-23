@@ -32,6 +32,10 @@ class _Ridge(_Estimator):
     where :math:`X` is the training data, :math:`y` the target data and :math:`α` is the
     regularization strength.
 
+    Ridge will regress a model for each block in X. If a block contains components
+    the component values will be stacked along the sample dimension for the fit.
+    Therefore, the corresponding weights will be the same for each component.
+
     :param parameter_keys:
         Parameters to perform the regression for. Examples are ``"values"``,
         ``"positions"``, ``"cell"`` or a combination of these.
@@ -56,26 +60,17 @@ class _Ridge(_Estimator):
         :param y:
             target data to check
         """
-        if len(X.components_names) != 0:
-            raise ValueError("`X` contains components")
-
         if y is not None:
             _check_maps(X, y, "_validate_data")
-
-            if len(y.components_names) != 0:
-                raise ValueError("`y` contains components")
 
             for key, X_block in X:
                 y_block = y.block(key)
                 _check_blocks(
-                    X_block, y_block, props=["samples"], fname="_validate_data"
+                    X_block,
+                    y_block,
+                    props=["samples", "components"],
+                    fname="_validate_data",
                 )
-
-                if len(y_block.properties) != 1:
-                    raise ValueError(
-                        "Only one property is allowed for target values. Given "
-                        f"`y` contains {len(y_block.properties)} property."
-                    )
 
     def _validate_params(
         self,
@@ -99,7 +94,10 @@ class _Ridge(_Estimator):
         for key, X_block in X:
             alpha_block = alpha.block(key)
             _check_blocks(
-                X_block, alpha_block, props=["properties"], fname="_validate_params"
+                X_block,
+                alpha_block,
+                props=["properties", "components"],
+                fname="_validate_params",
             )
 
             if len(alpha_block.samples) != 1:
@@ -111,7 +109,10 @@ class _Ridge(_Estimator):
             if sample_weight is not None:
                 sw_block = sample_weight.block(key)
                 _check_blocks(
-                    X_block, sw_block, props=["samples"], fname="_validate_params"
+                    X_block,
+                    sw_block,
+                    props=["samples", "components"],
+                    fname="_validate_params",
                 )
 
                 if len(sw_block.properties) != 1:
@@ -225,10 +226,15 @@ class _Ridge(_Estimator):
                 " 'cholesky_dual' and 'lstsq' are supported."
             )
 
+        # Reshape values into 1 sample + component shape + num_properties.
+        # The weights will the same for each component.
+        shape = [1] + [len(c) for c in X.components] + [num_properties]
+        values = np.tile(w, np.prod(shape[:-1])).reshape(shape)
+
         weights_block = TensorBlock(
-            values=w.reshape(1, -1),
+            values=values,
             samples=y.properties,
-            components=[],
+            components=X.components,
             properties=X.properties,
         )
 
