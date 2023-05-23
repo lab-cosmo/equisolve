@@ -12,7 +12,6 @@ import equistore
 import numpy as np
 import scipy.linalg
 from equistore import Labels, TensorBlock, TensorMap
-from equistore.operations.equal_metadata import _check_blocks, _check_maps
 
 from ... import HAS_TORCH
 from ...module import NumpyModule, _Estimator
@@ -60,17 +59,10 @@ class _Ridge(_Estimator):
         :param y:
             target data to check
         """
-        if y is not None:
-            _check_maps(X, y, "_validate_data")
-
-            for key, X_block in X:
-                y_block = y.block(key)
-                _check_blocks(
-                    X_block,
-                    y_block,
-                    props=["samples", "components"],
-                    fname="_validate_data",
-                )
+        if y is not None and not equistore.equal_metadata(
+            X, y, check=["samples", "components"]
+        ):
+            raise ValueError("Metadata of X and y does not agree!")
 
     def _validate_params(
         self,
@@ -78,28 +70,27 @@ class _Ridge(_Estimator):
         alpha: TensorBlock,
         sample_weight: Optional[TensorBlock] = None,
     ) -> None:
-        """Check regulerizer and sample weights have are correct wrt. to``X``.
+        """Check regulerizer and sample weights have are correct wrt. to ``X``.
 
         :param X:
             training data for reference
         :param sample_weight:
             sample weights
         """
+        if not equistore.equal_metadata(X, alpha, check=["components", "properties"]):
+            raise ValueError("Metadata of X and alpha does not agree!")
 
-        _check_maps(X, alpha, "_validate_params")
+        if sample_weight is not None and not equistore.equal_metadata(
+            X,
+            sample_weight,
+            check=[
+                "samples",
+                "components",
+            ],
+        ):
+            raise ValueError("Metadata of X and sample_weight does not agree!")
 
-        if sample_weight is not None:
-            _check_maps(X, sample_weight, "_validate_params")
-
-        for key, X_block in X:
-            alpha_block = alpha.block(key)
-            _check_blocks(
-                X_block,
-                alpha_block,
-                props=["properties", "components"],
-                fname="_validate_params",
-            )
-
+        for key, alpha_block in alpha:
             if len(alpha_block.samples) != 1:
                 raise ValueError(
                     "Only one sample is allowed for regularization. Given "
@@ -108,13 +99,6 @@ class _Ridge(_Estimator):
 
             if sample_weight is not None:
                 sw_block = sample_weight.block(key)
-                _check_blocks(
-                    X_block,
-                    sw_block,
-                    props=["samples", "components"],
-                    fname="_validate_params",
-                )
-
                 if len(sw_block.properties) != 1:
                     raise ValueError(
                         "Only one property is allowed for sample weights. Given "

@@ -10,9 +10,9 @@ import os
 import tempfile
 from typing import List
 
+import equistore
 import numpy as np
 from equistore import Labels, TensorBlock, TensorMap
-from equistore.io import load, save
 
 
 def block_to_array(block: TensorBlock, parameter_keys: List[str]) -> np.ndarray:
@@ -39,7 +39,7 @@ def block_to_array(block: TensorBlock, parameter_keys: List[str]) -> np.ndarray:
         if parameter == "values":
             data = block.values
         else:
-            data = block.gradient(parameter).data
+            data = block.gradient(parameter).values
         M.append(data.reshape(np.prod(data.shape[:-1]), data.shape[-1]))
     return np.vstack(M)
 
@@ -136,7 +136,7 @@ def tensor_map_to_dict(tensor_map: TensorMap):
         format
     """
     tmp_filename = tempfile.mktemp() + ".npz"
-    save(tmp_filename, tensor_map)
+    equistore.save(tmp_filename, tensor_map)
     tensor_map_dict = {key: value for key, value in np.load(tmp_filename).items()}
     os.remove(tmp_filename)
     return tensor_map_dict
@@ -151,11 +151,11 @@ def dict_to_tensor_map(tensor_map_dict: dict):
 
     :param tensor_map:
         :class:`dict` of :class:`numpy.ndarray`,
-        consistent with equistore.io.save format
+        consistent with :func:`equistore.save` format
 
     :returns tensor_map_dict:
         :class:`equistore.TensorMap` for the transform
     """
     tmp_filename = tempfile.mktemp() + ".npz"
     np.savez(tmp_filename, **tensor_map_dict)
-    return load(tmp_filename)
+    return equistore.load(tmp_filename)

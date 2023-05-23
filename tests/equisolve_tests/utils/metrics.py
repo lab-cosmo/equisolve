@@ -6,7 +6,7 @@
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
 import numpy as np
-from equistore import Labels, TensorMap
+from equistore import Labels, TensorBlock, TensorMap
 from numpy.testing import assert_allclose, assert_equal
 
 from equisolve.numpy.utils import matrix_to_block, tensor_to_tensormap
@@ -42,19 +42,20 @@ class Testrmse:
         X_values = X_arr[:num_targets]
         X_block = matrix_to_block(X_values)
 
-        X_gradient_data = X_arr[num_targets:].reshape(num_targets, 3, num_properties)
+        X_gradient_values = X_arr[num_targets:].reshape(num_targets, 3, num_properties)
 
         position_gradient_samples = Labels(
             ["sample", "structure", "atom"],
             np.array([[s, 1, 1] for s in range(num_targets)]),
         )
 
-        X_block.add_gradient(
-            parameter="positions",
-            data=X_gradient_data,
+        gradient = TensorBlock(
+            values=X_gradient_values,
             samples=position_gradient_samples,
             components=[Labels(["direction"], np.arange(3).reshape(-1, 1))],
+            properties=X_block.properties,
         )
+        X_block.add_gradient("positions", gradient)
 
         X = TensorMap(Labels.single(), [X_block])
 

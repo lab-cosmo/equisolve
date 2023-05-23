@@ -26,13 +26,13 @@ class Testblock_to_array:
         )
 
     @pytest.fixture
-    def gradient_data(self):
+    def gradient_values(self):
         return np.arange(self.n_samples * self.n_properties * 3).reshape(
             self.n_samples, 3, self.n_properties
         )
 
     @pytest.fixture
-    def block(self, values, gradient_data):
+    def block(self, values, gradient_values):
         properties = Labels(["property"], np.arange(self.n_properties).reshape(-1, 1))
         samples = Labels(["sample"], np.arange(self.n_samples).reshape(-1, 1))
 
@@ -40,12 +40,13 @@ class Testblock_to_array:
             values=values, samples=samples, components=[], properties=properties
         )
 
-        block.add_gradient(
-            parameter="positions",
-            data=gradient_data,
+        gradient = TensorBlock(
+            values=gradient_values,
             samples=samples,
             components=[Labels(["direction"], np.arange(3).reshape(-1, 1))],
+            properties=block.properties,
         )
+        block.add_gradient("positions", gradient)
 
         return block
 
@@ -55,13 +56,13 @@ class Testblock_to_array:
 
         assert_equal(block_mat, values)
 
-    def test_values_gradients(self, block, values, gradient_data):
+    def test_values_gradients(self, block, values, gradient_values):
         block_mat = block_to_array(block, parameter_keys=["values", "positions"])
 
         assert_equal(
             block_mat,
             np.vstack(
-                [values, gradient_data.reshape(self.n_samples * 3, self.n_properties)]
+                [values, gradient_values.reshape(self.n_samples * 3, self.n_properties)]
             ),
         )
 

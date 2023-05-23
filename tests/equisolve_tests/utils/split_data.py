@@ -29,14 +29,15 @@ def test_tensor_map_a():
         components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
         properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
     )
-    block_1.add_gradient(
-        "parameter",
+    gradient_1 = TensorBlock(
+        values=np.full((2, 1, 1), 11.0),
         samples=Labels(
             ["sample", "parameter"], np.array([[0, -2], [2, 3]], dtype=np.int32)
         ),
-        data=np.full((2, 1, 1), 11.0),
         components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
+        properties=block_1.properties,
     )
+    block_1.add_gradient("parameter", gradient_1)
 
     block_2 = TensorBlock(
         values=np.full((3, 1, 3), 2.0),
@@ -44,15 +45,16 @@ def test_tensor_map_a():
         components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
         properties=Labels(["properties"], np.array([[3], [4], [5]], dtype=np.int32)),
     )
-    block_2.add_gradient(
-        "parameter",
-        data=np.full((3, 1, 3), 12.0),
+    gradient_2 = TensorBlock(
+        values=np.full((3, 1, 3), 12.0),
         samples=Labels(
             ["sample", "parameter"],
             np.array([[0, -2], [0, 3], [2, -2]], dtype=np.int32),
         ),
         components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
+        properties=block_2.properties,
     )
+    block_2.add_gradient("parameter", gradient_2)
 
     block_3 = TensorBlock(
         values=np.full((4, 3, 1), 3.0),
@@ -68,9 +70,8 @@ def test_tensor_map_a():
         ],
         properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
     )
-    block_3.add_gradient(
-        "parameter",
-        data=np.full((1, 3, 1), 13.0),
+    gradient_3 = TensorBlock(
+        values=np.full((1, 3, 1), 13.0),
         samples=Labels(
             ["sample", "parameter"],
             np.array([[1, -2]], dtype=np.int32),
@@ -81,7 +82,9 @@ def test_tensor_map_a():
                 np.array([[0], [1], [2]], dtype=np.int32),
             )
         ],
+        properties=block_3.properties,
     )
+    block_3.add_gradient("parameter", gradient_3)
 
     block_4 = TensorBlock(
         values=np.full((4, 3, 1), 4.0),
@@ -94,9 +97,8 @@ def test_tensor_map_a():
         ],
         properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
     )
-    block_4.add_gradient(
-        "parameter",
-        data=np.full((2, 3, 1), 14.0),
+    gradient_4 = TensorBlock(
+        values=np.full((2, 3, 1), 14.0),
         samples=Labels(
             ["sample", "parameter"],
             np.array([[0, 1], [3, 3]], dtype=np.int32),
@@ -104,7 +106,9 @@ def test_tensor_map_a():
         components=[
             Labels(["components"], np.array([[0], [1], [2]], dtype=np.int32)),
         ],
+        properties=block_4.properties,
     )
+    block_4.add_gradient("parameter", gradient_4)
 
     keys = Labels(
         names=["key_1", "key_2"],
@@ -126,14 +130,15 @@ def test_tensor_map_b():
         components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
         properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
     )
-    block_1.add_gradient(
-        "parameter",
+    gradient_1 = TensorBlock(
+        values=np.full((2, 1, 1), 111.0),
         samples=Labels(
             ["sample", "parameter"], np.array([[0, -2], [2, 3]], dtype=np.int32)
         ),
-        data=np.full((2, 1, 1), 111.0),
         components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
+        properties=block_1.properties,
     )
+    block_1.add_gradient("parameter", gradient_1)
 
     block_2 = TensorBlock(
         values=np.full((3, 1, 3), 102.0),
@@ -144,15 +149,16 @@ def test_tensor_map_b():
             np.array([[3], [4], [5]], dtype=np.int32),
         ),
     )
-    block_2.add_gradient(
-        "parameter",
-        data=np.full((3, 1, 3), 112.0),
+    gradient_2 = TensorBlock(
+        values=np.full((3, 1, 3), 112.0),
         samples=Labels(
             ["sample", "parameter"],
             np.array([[0, -2], [0, 3], [2, -2]], dtype=np.int32),
         ),
         components=[Labels(["components"], np.array([[0]], dtype=np.int32))],
+        properties=block_2.properties,
     )
+    block_2.add_gradient("parameter", gradient_2)
 
     block_3 = TensorBlock(
         values=np.full((4, 3, 1), 103.0),
@@ -168,9 +174,8 @@ def test_tensor_map_b():
         ],
         properties=Labels(["properties"], np.array([[0]], dtype=np.int32)),
     )
-    block_3.add_gradient(
-        "parameter",
-        data=np.full((1, 3, 1), 113.0),
+    gradient_3 = TensorBlock(
+        values=np.full((1, 3, 1), 113.0),
         samples=Labels(
             ["sample", "parameter"],
             np.array([[1, -2]], dtype=np.int32),
@@ -181,7 +186,9 @@ def test_tensor_map_b():
                 np.array([[0], [1], [2]], dtype=np.int32),
             )
         ],
+        properties=block_3.properties,
     )
+    block_3.add_gradient("parameter", gradient_3)
 
     block_4 = TensorBlock(
         values=np.full((4, 3, 1), 104.0),
@@ -197,15 +204,16 @@ def test_tensor_map_b():
             np.array([[0]], dtype=np.int32),
         ),
     )
-    block_4.add_gradient(
-        "parameter",
-        data=np.full((2, 3, 1), 114.0),
+    gradient_4 = TensorBlock(
+        values=np.full((2, 3, 1), 114.0),
         samples=Labels(
             ["sample", "parameter"],
             np.array([[0, 1], [3, 3]], dtype=np.int32),
         ),
         components=[Labels(["components"], np.array([[0], [1], [2]], dtype=np.int32))],
+        properties=block_4.properties,
     )
+    block_4.add_gradient("parameter", gradient_4)
 
     keys = Labels(
         names=["key_1", "key_2"],
