@@ -38,7 +38,7 @@ class TestStandardScaler:
         ).fit(self.X)
         X_t = st.transform(self.X)
 
-        X_values = X_t.block().values
+        X_values = X_t[0].values
         if with_mean:
             assert_allclose(
                 np.mean(X_values, axis=0),
@@ -56,8 +56,8 @@ class TestStandardScaler:
 
         parameter_keys.remove("values")
         for parameter in parameter_keys:
-            X_grad = X_t.block().gradient(parameter)
-            X_grad = X_grad.data.reshape(-1, X_grad.data.shape[-1])
+            X_grad = X_t[0].gradient(parameter)
+            X_grad = X_grad.values.reshape(-1, X_grad.values.shape[-1])
             if with_mean:
                 assert_allclose(np.mean(X_grad, axis=0), 0, atol=1e-14, rtol=1e-14)
             if with_std:
@@ -81,18 +81,18 @@ class TestStandardScaler:
         X_t_inv_t = st.inverse_transform(st.transform(self.X))
 
         assert_allclose(
-            self.X.block().values,
-            X_t_inv_t.block().values,
+            self.X[0].values,
+            X_t_inv_t[0].values,
             atol=self.absolute_tolerance,
             rtol=self.relative_tolerance,
         )
 
         parameter_keys.remove("values")
         for parameter in parameter_keys:
-            X_grad = self.X.block().gradient(parameter)
+            X_grad = self.X[0].gradient(parameter)
             assert_allclose(
-                X_grad.data,
-                X_t_inv_t.block().gradient(parameter).data,
+                X_grad.values,
+                X_t_inv_t[0].gradient(parameter).values,
                 atol=self.absolute_tolerance,
                 rtol=self.relative_tolerance,
             )

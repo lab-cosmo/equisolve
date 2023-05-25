@@ -152,7 +152,7 @@ class TestRidge:
         ridge_class = self.equisolve_solver_from_numpy_arrays(
             X, y, property_w, sample_w, solver
         )
-        w_solver = ridge_class.weights.block().values[0, :]
+        w_solver = ridge_class.weights[0].values[0, :]
 
         # Check that the two approaches yield the same result
         assert_allclose(w_solver, w_exact, atol=1e-15, rtol=1e-10)
@@ -186,7 +186,7 @@ class TestRidge:
         if solver == "auto":
             assert_equal(ridge_class._used_auto_solver, "cholesky")
 
-        w_solver = ridge_class.weights.block().values[0, :]
+        w_solver = ridge_class.weights[0].values[0, :]
         w_ref = numpy_solver(X, y, sample_w, property_w)
 
         # Check that the two approaches yield the same result
@@ -221,7 +221,7 @@ class TestRidge:
         )
         if solver == "auto":
             assert_equal(ridge_class._used_auto_solver, "svd_primal")
-        w_solver = ridge_class.weights.block().values[0, :]
+        w_solver = ridge_class.weights[0].values[0, :]
 
         # Check that the two approaches yield the same result
         assert_allclose(w_solver, w_exact, atol=1e-15, rtol=1e-10)
@@ -256,7 +256,7 @@ class TestRidge:
         if solver == "auto":
             assert_equal(ridge_class._used_auto_solver, "cholesky")
 
-        w_solver = ridge_class.weights.block().values[0, :]
+        w_solver = ridge_class.weights[0].values[0, :]
         w_ref = numpy_solver(X, y, sample_w, property_w)
 
         # Check that the two approaches yield the same result
@@ -296,7 +296,7 @@ class TestRidge:
         ridge_class = self.equisolve_solver_from_numpy_arrays(
             X, y, property_w, sample_w, solver=solver
         )
-        w_solver = ridge_class.weights.block().values[0, :]
+        w_solver = ridge_class.weights[0].values[0, :]
         w_ref = numpy_solver(X, y, sample_w, property_w)
 
         # Check that the two approaches yield the same result
@@ -331,7 +331,7 @@ class TestRidge:
         )
         if solver == "auto":
             assert_equal(ridge_class._used_auto_solver, "lstsq_dual")
-        w_solver = ridge_class.weights.block().values[0, :]
+        w_solver = ridge_class.weights[0].values[0, :]
 
         # Check that the two approaches yield the same result
         assert_allclose(w_solver, w_exact, atol=1e-15, rtol=1e-10)
@@ -356,7 +356,7 @@ class TestRidge:
         )
         if solver == "auto":
             assert_equal(ridge_class._used_auto_solver, "cholesky_dual")
-        w_solver = ridge_class.weights.block().values[0, :]
+        w_solver = ridge_class.weights[0].values[0, :]
 
         # Generate new data
         X_validation = self.rng.normal(mean, 1, size=(50, num_properties))
@@ -365,7 +365,7 @@ class TestRidge:
 
         # Check that the two approaches yield the same result
         assert_allclose(
-            y_validation_pred.block().values[:, 0],
+            y_validation_pred[0].values[:, 0],
             y_validation_exact,
             atol=1e-15,
             rtol=1e-10,
@@ -395,7 +395,7 @@ class TestRidge:
         ridge_class = self.equisolve_solver_from_numpy_arrays(
             X, y, property_w, sample_w, solver
         )
-        w_solver = ridge_class.weights.block().values[0, :]
+        w_solver = ridge_class.weights[0].values[0, :]
         w_zeros = np.zeros((num_properties,))
 
         # Check that the two approaches yield the same result
@@ -422,11 +422,11 @@ class TestRidge:
         ridge_class = self.equisolve_solver_from_numpy_arrays(
             X, y, property_w, sample_w
         )
-        w_ref = ridge_class.weights.block().values[0, :]
+        w_ref = ridge_class.weights[0].values[0, :]
         ridge_class_scaled = self.equisolve_solver_from_numpy_arrays(
             X, y, scaling * property_w, scaling * sample_w, solver
         )
-        w_scaled = ridge_class_scaled.weights.block().values[0, :]
+        w_scaled = ridge_class_scaled.weights[0].values[0, :]
 
         # Check that the two approaches yield the same result
         assert_allclose(w_scaled, w_ref, atol=1e-13, rtol=1e-8)
@@ -452,11 +452,11 @@ class TestRidge:
         ridge_class = self.equisolve_solver_from_numpy_arrays(
             X, y, property_w, sample_w
         )
-        w_ref = ridge_class.weights.block().values[0, :]
+        w_ref = ridge_class.weights[0].values[0, :]
         ridge_class_scaled = self.equisolve_solver_from_numpy_arrays(
             scaling * X, scaling * y, property_w, scaling * sample_w, solver
         )
-        w_scaled = ridge_class_scaled.weights.block().values[0, :]
+        w_scaled = ridge_class_scaled.weights[0].values[0, :]
 
         # Check that the two approaches yield the same result
         assert_allclose(w_scaled, w_ref, atol=1e-13, rtol=1e-8)
@@ -496,7 +496,7 @@ class TestRidge:
         weights_arr = clf.fit(X=X, y=y, alpha=alpha).weights
         weights_float = clf.fit(X=X, y=y, alpha=2.0).weights
 
-        assert_equal(weights_float.block().values, weights_arr.block().values)
+        assert_equal(weights_float[0].values, weights_arr[0].values)
 
     def test_alpha_wrong_type(self):
         """Test error raise if alpha is neither a float nor a TensorMap."""
@@ -530,19 +530,20 @@ class TestRidge:
         X_values = X_arr[:num_targets]
         X_block = matrix_to_block(X_values)
 
-        X_gradient_data = X_arr[num_targets:].reshape(num_targets, 3, num_properties)
+        X_gradient_values = X_arr[num_targets:].reshape(num_targets, 3, num_properties)
 
         position_gradient_samples = Labels(
             ["sample", "structure", "atom"],
             np.array([[s, 1, 1] for s in range(num_targets)]),
         )
 
-        X_block.add_gradient(
-            parameter="positions",
-            data=X_gradient_data,
+        X_gradient = TensorBlock(
+            values=X_gradient_values,
             samples=position_gradient_samples,
             components=[Labels(["direction"], np.arange(3).reshape(-1, 1))],
+            properties=X_block.properties,
         )
+        X_block.add_gradient("positions", X_gradient)
 
         X = TensorMap(Labels.single(), [X_block])
 
@@ -552,38 +553,35 @@ class TestRidge:
         y_values = y_arr[:num_targets].reshape(-1, 1)
         y_block = matrix_to_block(y_values)
 
-        y_gradient_data = y_arr[num_targets:].reshape(num_targets, 3, 1)
+        y_gradient_values = y_arr[num_targets:].reshape(num_targets, 3, 1)
 
-        y_block.add_gradient(
-            parameter="positions",
-            data=y_gradient_data,
+        y_gradient = TensorBlock(
+            values=y_gradient_values,
             samples=position_gradient_samples,
             components=[Labels(["direction"], np.arange(3).reshape(-1, 1))],
+            properties=y_block.properties,
         )
+        y_block.add_gradient("positions", y_gradient)
 
         y = TensorMap(Labels.single(), [y_block])
 
         # Use no regularization.
-        alpha = tensor_to_tensormap(
-            np.zeros(num_properties).reshape(1, 1, -1), key_name="_"
-        )
-
         clf = Ridge(parameter_keys=parameter_keys)
-        clf.fit(X=X, y=y, alpha=alpha)
+        clf.fit(X=X, y=y, alpha=0.0)
 
         assert_allclose(
-            clf.weights.block().values, w_exact.reshape(1, -1), atol=1e-15, rtol=1e-10
+            clf.weights[0].values, w_exact.reshape(1, -1), atol=1e-15, rtol=1e-10
         )
 
         # Test prediction
         X_pred = clf.predict(X)
 
         if "values" in parameter_keys:
-            assert_allclose(X_pred.block().values, y.block().values)
+            assert_allclose(X_pred[0].values, y[0].values)
         if "positions" in parameter_keys:
             assert_allclose(
-                X_pred.block().gradient("positions").data,
-                y.block().gradient("positions").data,
+                X_pred[0].gradient("positions").values,
+                y[0].gradient("positions").values,
             )
 
     def test_components(self):
@@ -634,7 +632,7 @@ class TestRidge:
         sw = tensor_to_tensormap(sw_arr)
 
         clf = Ridge(parameter_keys="values")
-        with pytest.raises(ValueError, match="number of blocks"):
+        with pytest.raises(ValueError, match="Metadata of X and"):
             clf.fit(X=X, y=y, alpha=alpha, sample_weight=sw)
 
     def test_error_properties(self):
@@ -646,7 +644,7 @@ class TestRidge:
         )
 
         clf = Ridge(parameter_keys="values")
-        with pytest.raises(ValueError, match="properties"):
+        with pytest.raises(ValueError, match="Metadata of X and alpha"):
             clf.fit(X=X, y=y, alpha=alpha)
 
     @pytest.mark.parametrize("extra_samples", [[0, 1], [1, 0]])
@@ -661,7 +659,7 @@ class TestRidge:
         )
 
         clf = Ridge(parameter_keys="values")
-        with pytest.raises(ValueError, match="samples"):
+        with pytest.raises(ValueError, match="Metadata of X"):
             clf.fit(X=X, y=y, alpha=alpha, sample_weight=sw)
 
     def test_error_no_weights(self):

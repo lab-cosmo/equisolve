@@ -48,35 +48,37 @@ class TestConvert:
 
         property_tm = ase_to_tensormap(frames, "energy", "forces", "stress")
 
-        # Use `block()` function without parameters to check that TensorMap
+        # Use `[0]` function without parameters to check that TensorMap
         # only has one block.
-        block = property_tm.block()
+        block = property_tm[0]
 
         assert_equal(block.values, np.array(energies).reshape(-1, 1))
         assert_equal(
-            block.gradient("positions").data,
+            block.gradient("positions").values,
             -np.concatenate(forces, axis=0).reshape(-1, 3, 1),
         )
         assert_equal(
-            block.gradient("cell").data, -np.array(stress).reshape(-1, 3, 3, 1)
+            block.gradient("cell").values, -np.array(stress).reshape(-1, 3, 3, 1)
         )
 
     def test_properties_to_tensormap(self, energies, forces, stress):
         property_tm = properties_to_tensormap(energies, forces, stress)
-        block = property_tm.block()
+        block = property_tm[0]
 
         assert_equal(block.values, np.array(energies).reshape(-1, 1))
         assert_equal(
-            block.gradient("positions").data,
+            block.gradient("positions").values,
             np.concatenate(forces, axis=0).reshape(-1, 3, 1),
         )
-        assert_equal(block.gradient("cell").data, np.array(stress).reshape(-1, 3, 3, 1))
+        assert_equal(
+            block.gradient("cell").values, np.array(stress).reshape(-1, 3, 3, 1)
+        )
 
     def test_position_gradient_samples(self, energies, forces):
         """Test that the position gradients sample labels agree with the convention."""
 
         property_tm = properties_to_tensormap(energies, forces)
-        block = property_tm.block()
+        block = property_tm[0]
 
         samples = block.gradient("positions").samples
 
@@ -104,7 +106,7 @@ class TestConvert:
         """Test that the cell gradients sample labels agree with the convention."""
 
         property_tm = properties_to_tensormap(energies, cell_gradients=stress)
-        block = property_tm.block()
+        block = property_tm[0]
 
         samples = block.gradient("cell").samples
 

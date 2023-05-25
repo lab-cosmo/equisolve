@@ -43,7 +43,7 @@ keywords = [
 requires-python = ">=3.7"
 
 dependencies = [
-    "equistore @ https://github.com/lab-cosmo/equistore/archive/724b83e.zip",
+    "equistore @ https://github.com/lab-cosmo/equistore/archive/09deb79.zip",
     "numpy",
     "scipy",
     "skmatter"

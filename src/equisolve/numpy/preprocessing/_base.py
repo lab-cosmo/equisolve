@@ -1,8 +1,8 @@
 from typing import List, Optional, Union
 
+import equistore
 import numpy as np
 from equistore import Labels, TensorBlock, TensorMap
-from equistore.operations.equal_metadata import _check_blocks, _check_maps
 
 from ... import HAS_TORCH
 from ...module import NumpyModule, _Transformer
@@ -65,16 +65,11 @@ class _StandardScaler(_Transformer):
             raise ValueError("X contains components")
 
         if y is not None:
-            _check_maps(X, y, "_validate_data")
+            if not equistore.equal_metadata(X, y, check=["samples"]):
+                raise ValueError("Metadata of X and sample_weight does not agree!")
 
             if len(y.components_names) != 0:
                 raise ValueError("y contains components")
-
-            for key, X_block in X:
-                y_block = y.block(key)
-                _check_blocks(
-                    X_block, y_block, props=["samples"], fname="_validate_data"
-                )
 
     def fit(
         self,
@@ -183,12 +178,13 @@ class _StandardScaler(_Transformer):
                 else:
                     mean_values = np.zeros((1, 1, self.n_properties_))
 
-                mean_block.add_gradient(
-                    parameter,
-                    mean_values.reshape(1, 1, -1),
-                    Labels(["sample"], np.array([[0]], dtype=np.int32)),
-                    [Labels.single()],
+                gradient = TensorBlock(
+                    values=mean_values.reshape(1, 1, -1),
+                    samples=Labels(["sample"], np.array([[0]], dtype=np.int32)),
+                    components=[Labels.single()],
+                    properties=mean_block.properties,
                 )
+                mean_block.add_gradient(parameter, gradient)
 
                 if self.with_std and (parameter in self.parameter_keys):
                     X_mean = np.average(X_mat, weights=sample_weights, axis=0)
@@ -209,12 +205,14 @@ class _StandardScaler(_Transformer):
                         scale_values = np.sqrt(var_sum).reshape(1, 1)
                 else:
                     scale_values = np.ones((1, 1))
-                scale_block.add_gradient(
-                    parameter,
-                    scale_values,
-                    Labels(["sample"], np.array([[0]])),  # samples
-                    [],
+                gradient = TensorBlock(
+                    values=scale_values,
+                    samples=Labels(["sample"], np.array([[0]])),
+                    components=scale_block.components,
+                    properties=scale_block.properties,
                 )
+                scale_block.add_gradient(parameter, gradient)
+
             mean_blocks.append(mean_block)
             scale_blocks.append(scale_block)
 
@@ -267,13 +265,15 @@ class _StandardScaler(_Transformer):
             for parameter in X_block.gradients_list():
                 X_gradient = X_block.gradient(parameter)
 
-                block.add_gradient(
-                    parameter,
-                    (X_gradient.data - mean_block.gradient(parameter).data)
-                    / scale_block.gradient(parameter).data,
-                    X_gradient.samples,
-                    X_gradient.components,
+                gradient = TensorBlock(
+                    values=(X_gradient.values - mean_block.gradient(parameter).values)
+                    / scale_block.gradient(parameter).values,
+                    samples=X_gradient.samples,
+                    components=X_gradient.components,
+                    properties=X_gradient.properties,
                 )
+
+                block.add_gradient(parameter, gradient)
             blocks.append(block)
 
         self.mean_map_ = tensor_map_to_dict(self.mean_map_)
@@ -317,13 +317,14 @@ class _StandardScaler(_Transformer):
             for parameter in X_block.gradients_list():
                 X_gradient = X_block.gradient(parameter)
 
-                block.add_gradient(
-                    parameter,
-                    (X_gradient.data * scale_block.gradient(parameter).data)
-                    + mean_block.gradient(parameter).data,
-                    X_gradient.samples,
-                    X_gradient.components,
+                gradient = TensorBlock(
+                    values=(X_gradient.values * scale_block.gradient(parameter).values)
+                    + mean_block.gradient(parameter).values,
+                    samples=X_gradient.samples,
+                    components=X_gradient.components,
+                    properties=X_gradient.properties,
                 )
+                block.add_gradient(parameter, gradient)
             blocks.append(block)
 
         self.mean_map_ = tensor_map_to_dict(self.mean_map_)

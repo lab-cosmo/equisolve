@@ -17,7 +17,6 @@ We first import all necessary packages.
 import ase.io
 import equistore
 import numpy as np
-from equistore import Labels
 from rascaline import SoapPowerSpectrum
 
 from equisolve.numpy.models.linear_model import Ridge
@@ -104,8 +103,8 @@ print(f"X contains {len(X.blocks())} block.")
 # We acces the data using the :meth:``equistore.TensorMap.block`` method
 
 
-print(f"X contains {len(X.block().properties)} properties.")
-print(f"X contains {len(X.block().samples)} samples.")
+print(f"X contains {len(X[0].properties)} properties.")
+print(f"X contains {len(X[0].samples)} samples.")
 
 # Target data
 # -----------
@@ -120,7 +119,7 @@ y = ase_to_tensormap(frames, energy="energy", forces="forces")
 #
 # The target data y contains a single block
 
-print(y.block())
+print(y[0])
 
 # %%
 #
@@ -157,7 +156,7 @@ alpha = equistore.multiply(alpha, 1e-5)
 # We remove all sample except the 0th one by using the
 # :func:`equistore.slice`.
 
-samples = Labels(
+samples = equistore.Labels(
     names=["structure"],
     values=np.array([(0,)]),
 )
@@ -186,7 +185,7 @@ sw = equistore.multiply(sw, 5.0)
 # :class:`equistore.TensorMap` with the same shape as our target data ``y`` but
 # with values a defined by ``sw_dict``.
 
-print(sw.block())
+print(sw[0])
 
 # %%
 #

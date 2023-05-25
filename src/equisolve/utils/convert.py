@@ -12,8 +12,7 @@ from typing import List
 
 import ase
 import numpy as np
-from equistore import Labels, TensorMap
-from equistore.block import TensorBlock
+from equistore import Labels, TensorBlock, TensorMap
 
 
 def ase_to_tensormap(
@@ -105,12 +104,12 @@ def properties_to_tensormap(
                 f"{len(positions_gradients)} positions_gradients values"
             )
 
-        gradient_data = np.concatenate(positions_gradients, axis=0)
+        gradient_values = np.concatenate(positions_gradients, axis=0)
 
-        if gradient_data.shape[1] != 3:
+        if gradient_values.shape[1] != 3:
             raise ValueError(
                 "positions_gradient must have 3 columns but have "
-                f"{gradient_data.shape[1]}"
+                f"{gradient_values.shape[1]}"
             )
 
         # The `"sample"` label refers to the index of the corresponding value in the
@@ -127,12 +126,13 @@ def properties_to_tensormap(
             ),
         )
 
-        block.add_gradient(
-            parameter="positions",
-            data=gradient_data.reshape(-1, 3, 1),
+        positions_gradient = TensorBlock(
+            values=gradient_values.reshape(-1, 3, 1),
             samples=position_gradient_samples,
             components=[Labels(["direction"], np.arange(3).reshape(-1, 1))],
+            properties=block.properties,
         )
+        block.add_gradient("positions", positions_gradient)
 
     if cell_gradients is not None:
         if n_structures != len(cell_gradients):
@@ -141,12 +141,12 @@ def properties_to_tensormap(
                 f"{len(cell_gradients)} cell_gradients values"
             )
 
-        gradient_data = np.asarray(cell_gradients)
+        gradient_values = np.asarray(cell_gradients)
 
-        if gradient_data.shape[1:] != (3, 3):
+        if gradient_values.shape[1:] != (3, 3):
             raise ValueError(
                 "cell_gradient data must be a 3 x 3 matrix"
-                f"but is {gradient_data.shape[1]} x {gradient_data.shape[2]}"
+                f"but is {gradient_values.shape[1]} x {gradient_values.shape[2]}"
             )
 
         # the values of the sample labels are chosen in the same way as for the
@@ -160,11 +160,12 @@ def properties_to_tensormap(
             Labels(["direction_2"], np.arange(3).reshape(-1, 1)),
         ]
 
-        block.add_gradient(
-            parameter="cell",
-            data=gradient_data.reshape(-1, 3, 3, 1),
+        cell_gradient = TensorBlock(
+            values=gradient_values.reshape(-1, 3, 3, 1),
             samples=cell_gradient_samples,
             components=components,
+            properties=block.properties,
         )
+        block.add_gradient("cell", cell_gradient)
 
     return TensorMap(Labels.single(), [block])
