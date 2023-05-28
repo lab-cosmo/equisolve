@@ -62,7 +62,9 @@ class _Ridge(_Estimator):
         if y is not None and not equistore.equal_metadata(
             X, y, check=["samples", "components"]
         ):
-            raise ValueError("Metadata of X and y does not agree!")
+            raise ValueError(
+                "Metadata (samples, components) of X and y does not agree!"
+            )
 
     def _validate_params(
         self,
@@ -78,7 +80,9 @@ class _Ridge(_Estimator):
             sample weights
         """
         if not equistore.equal_metadata(X, alpha, check=["components", "properties"]):
-            raise ValueError("Metadata of X and alpha does not agree!")
+            raise ValueError(
+                "Metadata (components, properties) of X and alpha does not agree!"
+            )
 
         if sample_weight is not None and not equistore.equal_metadata(
             X,
@@ -88,7 +92,9 @@ class _Ridge(_Estimator):
                 "components",
             ],
         ):
-            raise ValueError("Metadata of X and sample_weight does not agree!")
+            raise ValueError(
+                "Metadata (samples, components) of X and sample_weight does not agree!"
+            )
 
         for key, alpha_block in alpha:
             if len(alpha_block.samples) != 1:

@@ -66,7 +66,9 @@ class _StandardScaler(_Transformer):
 
         if y is not None:
             if not equistore.equal_metadata(X, y, check=["samples"]):
-                raise ValueError("Metadata of X and sample_weight does not agree!")
+                raise ValueError(
+                    "Metadata (samples) of X and sample_weight does not agree!"
+                )
 
             if len(y.components_names) != 0:
                 raise ValueError("y contains components")
