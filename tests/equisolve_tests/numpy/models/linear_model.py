@@ -632,7 +632,8 @@ class TestRidge:
         sw = tensor_to_tensormap(sw_arr)
 
         clf = Ridge(parameter_keys="values")
-        with pytest.raises(ValueError, match="Metadata of X and"):
+        # accepts error message of the form "Metadata *something* does not agree!"
+        with pytest.raises(ValueError, match="^Metadata .* does not agree!$"):
             clf.fit(X=X, y=y, alpha=alpha, sample_weight=sw)
 
     def test_error_properties(self):
@@ -644,7 +645,8 @@ class TestRidge:
         )
 
         clf = Ridge(parameter_keys="values")
-        with pytest.raises(ValueError, match="Metadata of X and alpha"):
+        # accepts error message of the form "Metadata *something* does not agree!"
+        with pytest.raises(ValueError, match="^Metadata .* does not agree!$"):
             clf.fit(X=X, y=y, alpha=alpha)
 
     @pytest.mark.parametrize("extra_samples", [[0, 1], [1, 0]])
@@ -659,7 +661,7 @@ class TestRidge:
         )
 
         clf = Ridge(parameter_keys="values")
-        with pytest.raises(ValueError, match="Metadata of X"):
+        with pytest.raises(ValueError, match="^Metadata .* does not agree!$"):
             clf.fit(X=X, y=y, alpha=alpha, sample_weight=sw)
 
     def test_error_no_weights(self):
