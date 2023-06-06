@@ -11,8 +11,14 @@ import tempfile
 from typing import List
 
 import equistore
-import numpy as np
 from equistore import Labels, TensorBlock, TensorMap
+import numpy as np
+
+from .. import HAS_TORCH
+
+if HAS_TORCH:
+    import torch
+    from equistore.torch import Labels as TorchLabels, TensorBlock as TorchTensorBlock, TensorMap as TorchTensorMap
 
 
 def block_to_array(block: TensorBlock, parameter_keys: List[str]) -> np.ndarray:
@@ -86,6 +92,48 @@ def matrix_to_block(
 
     return block
 
+def matrix_to_torch_block(
+    a: torch.Tensor, sample_name: str = "sample", property_name: str = "property"
+) -> TensorBlock:
+    """Create a :class:`equistore.TensorBlock` from 2d :class`numpy.ndarray`.
+
+    The values of the block are the same as `a`. The name of the property labels
+    is `'property' and name of the sample labels are `'sample'`. The block has
+    no components.
+
+    :param a:
+        2d numpy array for Blocks values
+    :param sample_name:
+        name of the TensorBlocks' samples
+    :param property_name:
+        name of the TensorMaps' properties
+
+    :returns block:
+        block with filled values
+
+    Example:
+    >>> a = np.zeros([2,2])
+    >>> block = matrix_to_block(a)
+    >>> print(block)
+    """
+
+    if len(a.shape) != 2:
+        raise ValueError(f"`a` has {len(a.shape)} but must have exactly 2")
+
+    n_samples, n_properties = a.shape
+
+    samples = TorchLabels([sample_name], torch.arange(n_samples).reshape(-1, 1))
+    properties = TorchLabels([property_name], torch.arange(n_properties).reshape(-1, 1))
+
+    block = TorchTensorBlock(
+        values=a,
+        samples=samples,
+        components=[],
+        properties=properties,
+    )
+
+    return block
+
 
 def tensor_to_tensormap(a: np.ndarray, key_name: str = "keys") -> TensorMap:
     """Create a :class:`equistore.TensorMap` from 3d :class`numpy.ndarray`.
@@ -119,6 +167,39 @@ def tensor_to_tensormap(a: np.ndarray, key_name: str = "keys") -> TensorMap:
 
     keys = Labels([key_name], np.arange(len(blocks)).reshape(-1, 1))
     return TensorMap(keys, blocks)
+
+def tensor_to_torch_tensormap(a: torch.Tensor, key_name: str = "keys") -> TensorMap:
+    """Create a :class:`equistore.TensorMap` from 3d :class`numpy.ndarray`.
+
+    First dimension of a defines the number of blocks.
+    The values of each block are taken from the second and the third dimension.
+    The name of the property labels in each block is `'property' and name of the sample
+    labels is `'sample'`. The blocks have no components.
+
+    :param a:
+        3d numpy array for the block of the TensorMap values
+    :param key_name:
+        name of the TensorMaps' keys
+
+    :returns:
+        TensorMap with filled values
+
+
+    Example:
+    >>> a = torch.zeros([2,2])
+    >>> # make 2d array 3d tensor
+    >>> tensor = tensor_to_torch_tensormap(a[np.newaxis, :])
+    >>> print(tensor)
+    """
+    if len(a.shape) != 3:
+        raise ValueError(f"`a` has {len(a.shape)} but must have exactly 3")
+
+    blocks = []
+    for values in a:
+        blocks.append(matrix_to_torch_block(values))
+
+    keys = TorchLabels([key_name], torch.arange(len(blocks)).reshape(-1, 1))
+    return TorchTensorMap(keys, blocks)
 
 
 def tensor_map_to_dict(tensor_map: TensorMap):

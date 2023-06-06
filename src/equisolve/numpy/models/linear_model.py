@@ -6,17 +6,21 @@
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
 
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Type
 
 import equistore
+from equistore import Labels, TensorBlock, TensorMap
 import numpy as np
 import scipy.linalg
-from equistore import Labels, TensorBlock, TensorMap
 
 from ... import HAS_TORCH
 from ...module import NumpyModule, _Estimator
 from ...utils.metrics import rmse
 from ..utils import block_to_array, dict_to_tensor_map, tensor_map_to_dict
+
+if HAS_TORCH:
+    from equistore.torch import Labels as TorchLabels, TensorBlock as TorchTensorBlock, TensorMap as TorchTensorMap
+
 
 
 class _Ridge(_Estimator):
@@ -310,18 +314,20 @@ class _Ridge(_Estimator):
             weights_blocks.append(weight_block)
 
         # convert weights to a dictionary allowing pickle dump of an instance
-        self._weights = tensor_map_to_dict(TensorMap(X.keys, weights_blocks))
-
+        self._set_weights(TensorMap(X.keys, weights_blocks))
         return self
 
-    @property
+    def _set_weights(self, weights: TensorMap) -> None:
+        self._weights = weights
+
+    # @property is not supported by torchscript
     def weights(self) -> TensorMap:
         """``Tensormap`` containing the weights of the provided training data."""
 
         if self._weights is None:
             raise ValueError("No weights. Call fit method first.")
 
-        return dict_to_tensor_map(self._weights)
+        return self._weights
 
     def predict(self, X: TensorMap) -> TensorMap:
         """
@@ -332,7 +338,7 @@ class _Ridge(_Estimator):
         :returns:
             predicted values
         """
-        return equistore.dot(X, self.weights)
+        return equistore.dot(X, self.weights())
 
     def forward(self, X: TensorMap) -> TensorMap:
         return self.predict(X)
@@ -376,6 +382,229 @@ if HAS_TORCH:
             torch.nn.Module.__init__(self)
             _Ridge.__init__(self, parameter_keys)
 
+        def fit(
+            self,
+            X: TensorMap,
+            y: TensorMap,
+            alpha: Union[float, TensorMap] = 1.0,
+            sample_weight: Union[float, TensorMap] = None,
+            solver="auto",
+            cond: float = None,
+        ) -> None:
+            _Ridge.fit(self, X, y, alpha, sample_weight, solver, cond)
+
+        # Required because in torch.nn.Module we cannot reasign variables
+        # Once set we can only update the values 
+        def _set_weights(self, weights: TorchTensorMap) -> None:
+            self._weights = to_torch_tensor_map(weights)
+
+        def predict(self, X: TorchTensorMap) -> TorchTensorMap:
+            return dot(X, self.weights())
+
+        def forward(self, X: TorchTensorMap) -> TorchTensorMap:
+            return self.predict(X)
+
+        def weights(self) -> TorchTensorMap:
+            """``Tensormap`` containing the weights of the provided training data."""
+
+            if self._weights is None:
+                raise ValueError("No weights. Call fit method first.")
+
+            return self._weights
+
     Ridge = TorchRidge
 else:
     Ridge = NumpyRidge
+
+
+def to_torch_labels(labels : Labels):
+    return TorchLabels(
+        names = list(labels.dtype.names),
+        values = torch.tensor(labels.tolist(), dtype=torch.int32)
+    )
+def to_torch_tensor_map(tensor_map : TensorMap):
+    blocks = []
+    for _, block in tensor_map:
+        blocks.append(TorchTensorBlock(
+                values = torch.tensor(block.values),
+                samples = to_torch_labels(block.samples),
+                components = [to_torch_labels(component) for component in block.components],
+                properties = to_torch_labels(block.properties),
+            )
+        )
+
+    return TorchTensorMap(
+            keys = to_torch_labels(tensor_map.keys),
+            blocks = blocks,
+        )
+
+
+def dot(tensor_1: TorchTensorMap, tensor_2: TorchTensorMap) -> TorchTensorMap:
+    """Compute the dot product of two :py:class:`TensorMap`.
+    """
+    _check_same_keys(tensor_1, tensor_2, "dot")
+
+    blocks: List[TorchTensorBlock] = []
+    for key, block_1 in tensor_1.items():
+        block_2 = tensor_2.block(key)
+        blocks.append(_dot_block(block_1=block_1, block_2=block_2))
+
+    return TorchTensorMap(tensor_1.keys, blocks)
+
+
+def _dot_block(block_1: TorchTensorBlock, block_2: TorchTensorBlock) -> TorchTensorBlock:
+    if not torch.all(torch.tensor(block_1.properties == block_2.properties)):
+        raise ValueError("TensorBlocks in `dot` should have the same properties")
+
+    if len(block_2.components) > 0:
+        raise ValueError("the second TensorMap in `dot` should not have components")
+
+    if len(block_2.gradients_list()) > 0:
+        raise ValueError("the second TensorMap in `dot` should not have gradients")
+
+    # values = block_1.values @ block_2.values.T
+    values = _dispatch_dot(block_1.values, block_2.values)
+
+    result_block = TorchTensorBlock(
+        values=values,
+        samples=block_1.samples,
+        components=block_1.components,
+        properties=block_2.samples,
+    )
+
+    # I dont know wtf torchscript wants here
+    for parameter, gradient in block_1.gradients().items():
+        if len(gradient.gradients_list()) != 0:
+            raise NotImplementedError("gradients of gradients are not supported")
+
+        # gradient_values = gradient.values @ block_2.values.T
+        gradient_values = _dispatch_dot(gradient.values, block_2.values)
+
+        result_block.add_gradient(
+            parameter=parameter,
+            gradient=TorchTensorBlock(
+                values=gradient_values,
+                samples=gradient.samples,
+                components=gradient.components,
+                properties=result_block.properties,
+            ),
+        )
+
+    return result_block
+
+def _check_same_keys(a: TorchTensorMap, b: TorchTensorMap, fname: str):
+    """Check if metadata between two TensorMaps is consistent for an operation.
+
+    The functions verifies that
+
+    1. The key names are the same.
+    2. The number of blocks in the same
+    3. The block key indices are the same.
+
+    :param a: first :py:class:`TensorMap` for check
+    :param b: second :py:class:`TensorMap` for check
+    """
+
+    keys_a: TorchLabels = a.keys
+    keys_b: TorchLabels = b.keys
+
+    if keys_a.names != keys_b.names:
+        raise ValueError(
+            f"inputs to {fname} should have the same keys names, "
+            f"got '{keys_a.names}' and '{keys_b.names}'"
+        )
+
+    if len(keys_a) != len(keys_b):
+        raise ValueError(
+            f"inputs to {fname} should have the same number of blocks, "
+            f"got {len(keys_a)} and {len(keys_b)}"
+        )
+
+    #list_keys: List[bool] = []
+    #for i in range(len(keys_b)):
+    #    is_in_key_a = keys_b[i] in keys_a
+    #for key in keys_b:
+    #    is_in_key_a = key in keys_a
+    #    list_keys.append(is_in_key_a)
+
+    ##if not torch.all(torch.tensor(list_keys)):
+    if not torch.all(torch.tensor([keys_b[i] in keys_a for i in range(len(keys_b))])):
+        raise ValueError(f"inputs to {fname} should have the same keys")
+
+
+def _check_blocks(a: TensorBlock, b: TensorBlock, props: List[str], fname: str):
+    """Check if metadata between two TensorBlocks is consistent for an operation.
+
+    The functions verifies that that the metadata of the given props is the same
+    (length and indices).
+
+    :param a: first :py:class:`TensorBlock` for check
+    :param b: second :py:class:`TensorBlock` for check
+    :param props: A list of strings containing the property to check.
+                 Allowed values are ``'properties'`` or ``'samples'``,
+                 ``'components'`` and ``'gradients'``.
+    """
+    for prop in props:
+        err_msg = f"inputs to '{fname}' should have the same {prop}:\n"
+        err_msg_len = f"{prop} of the two `TensorBlock` have different lengths"
+        err_msg_1 = f"{prop} are not the same or not in the same order"
+        err_msg_names = f"{prop} names are not the same or not in the same order"
+
+        if prop == "samples":
+            if not len(a.samples) == len(b.samples):
+                raise ValueError(err_msg + err_msg_len)
+            if not a.samples.names == b.samples.names:
+                raise ValueError(err_msg + err_msg_names)
+            if not torch.all(a.samples == b.samples):
+                raise ValueError(err_msg + err_msg_1)
+
+        elif prop == "properties":
+            if not len(a.properties) == len(b.properties):
+                raise ValueError(err_msg + err_msg_len)
+            if not a.properties.names == b.properties.names:
+                raise ValueError(err_msg + err_msg_names)
+            if not torch.all(torch.tensor(a.properties == b.properties)):
+                raise ValueError(err_msg + err_msg_1)
+
+        elif prop == "components":
+            if len(a.components) != len(b.components):
+                raise ValueError(err_msg + err_msg_len)
+
+            for c1, c2 in zip(a.components, b.components):
+                if not (c1.names == c2.names):
+                    raise ValueError(err_msg + err_msg_names)
+
+                if not (len(c1) == len(c2)):
+                    raise ValueError(err_msg + err_msg_1)
+
+                if not torch.all(c1 == c2):
+                    raise ValueError(err_msg + err_msg_1)
+
+        else:
+            raise ValueError(
+                f"{prop} is not a valid property to check, "
+                "choose from ['samples', 'properties', 'components']"
+            )
+
+
+def _dispatch_dot(A, B):
+    """Compute dot product of two arrays.
+
+    This function has the same behavior as  ``np.dot(A, B.T)``, and assumes the
+    second array is 2-dimensional.
+    """
+    #if isinstance(A, np.ndarray):
+    #    _check_all_same_type([B], np.ndarray)
+    #    shape1 = A.shape
+    #    assert len(B.shape) == 2
+    #    # Using matmul/@ is the recommended way in numpy docs for 2-dimensional
+    #    # matrices
+    #    if len(shape1) == 2:
+    #        return A @ B.T
+    #    else:
+    #        return np.dot(A, B.T)
+    if isinstance(A, torch.Tensor):
+        assert len(B.shape) == 2
+        return A @ B.T
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)

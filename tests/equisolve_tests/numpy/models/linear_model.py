@@ -7,12 +7,23 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import numpy as np
 import pytest
-from equistore import Labels, TensorBlock, TensorMap
 from numpy.testing import assert_allclose, assert_equal
 
-from equisolve.numpy.models import Ridge
-from equisolve.numpy.utils import matrix_to_block, tensor_to_tensormap
+from equistore import Labels, TensorBlock, TensorMap
 
+from equisolve.numpy.models import Ridge
+from equisolve.numpy.utils import matrix_to_block, tensor_to_tensormap as tensor_to_numpy_tensormap
+
+
+try:
+    import torch
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+
+if HAS_TORCH:
+    from equistore.torch import Labels as TorchLabels, TensorBlock as TorchTensorBlock, TensorMap as TorchTensorMap
+    from equisolve.numpy.utils import tensor_to_torch_tensormap
 
 def numpy_solver(X, y, sample_weights, regularizations):
     _, num_properties = X.shape
@@ -40,14 +51,13 @@ class TestRidge:
         """
         self.rng = np.random.default_rng(0x1225787418FBDFD12)
 
-    def to_equistore(self, X_arr=None, y_arr=None, alpha_arr=None, sw_arr=None):
+    def to_equistore(self, X_arr=None, y_arr=None, alpha_arr=None, sw_arr=None, tensor_to_tensormap=tensor_to_numpy_tensormap):
         """Convert Ridge parameters into equistore Tensormap's with one block."""
 
         returns = ()
-
         if X_arr is not None:
             assert len(X_arr.shape) == 2
-            X = tensor_to_tensormap(X_arr[np.newaxis, :])
+            X = tensor_to_tensormap(X_arr[None, :])
             returns += (X,)
         if y_arr is not None:
             assert len(y_arr.shape) == 1
@@ -76,6 +86,51 @@ class TestRidge:
         clf = Ridge(parameter_keys="values")
         clf.fit(X=X, y=y, alpha=alpha, sample_weight=sw, solver=solver)
         return clf
+
+    num_properties = np.array([119])
+    num_targets = np.array([87])
+    means = np.array([-0.5, 0, 0.1])
+    regularizations = np.geomspace(1e-5, 1e5, 3)
+    solvers = ["auto", "cholesky_dual", "lstsq"]
+
+    @pytest.mark.parametrize("num_properties", num_properties)
+    @pytest.mark.parametrize("num_targets", num_targets)
+    @pytest.mark.parametrize("mean", means)
+    @pytest.mark.parametrize("solver", solvers)
+    def test_predict_updated(self, num_properties, num_targets, mean, solver):
+        """Test that for given weights, the predicted target values on new
+        data is correct."""
+        # Define properties and target properties
+        X = self.rng.normal(mean, 1, size=(num_targets, num_properties))
+        w_exact = self.rng.normal(mean, 3, size=(num_properties,))
+        y = X @ w_exact
+        sample_w = np.ones((num_targets,))
+        property_w = np.zeros((num_properties,))
+
+        # Use solver to compute weights from X and y
+        ridge_class = self.equisolve_solver_from_numpy_arrays(
+            X, y, property_w, sample_w, solver
+        )
+        if solver == "auto":
+            assert_equal(ridge_class._used_auto_solver, "cholesky_dual")
+        w_solver = ridge_class.weights[0].values[0, :]
+
+        # Generate new data
+        if HAS_TORCH:
+            X_validation = torch.tensor(self.rng.normal(mean, 1, size=(50, num_properties)))
+            y_validation_exact = torch.tensor(X_validation) @ w_solver
+        else:
+            X_validation = self.rng.normal(mean, 1, size=(50, num_properties))
+            y_validation_exact = X_validation @ w_solver
+        y_validation_pred = ridge_class.predict(self.to_equistore(X_validation, tensor_to_tensormap=tensor_to_torch_tensormap))
+
+        # Check that the two approaches yield the same result
+        assert_allclose(
+            y_validation_pred[0].values[:, 0],
+            y_validation_exact,
+            atol=1e-15,
+            rtol=1e-10,
+        )
 
     num_properties = np.array([91])
     num_targets = np.array([1000])
@@ -262,6 +317,7 @@ class TestRidge:
         # Check that the two approaches yield the same result
         assert_allclose(w_solver, w_ref, atol=1e-13, rtol=1e-8)
 
+
     num_properties = np.array([119])
     num_targets = np.array([87])
     means = np.array([-0.5, 0, 0.1])
@@ -360,7 +416,10 @@ class TestRidge:
 
         # Generate new data
         X_validation = self.rng.normal(mean, 1, size=(50, num_properties))
-        y_validation_exact = X_validation @ w_solver
+        if HAS_TORCH:
+            y_validation_exact = torch.tensor(X_validation) @ w_solver
+        else:
+            y_validation_exact = X_validation @ w_solver
         y_validation_pred = ridge_class.predict(self.to_equistore(X_validation))
 
         # Check that the two approaches yield the same result
