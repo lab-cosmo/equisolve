@@ -1,0 +1,2 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+equistore-torch@git+https://github.com/Luthaf/equistore.git@torch-core-classes#subdirectory=python/equistore-torch

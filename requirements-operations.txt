@@ -1,0 +1,1 @@
+equistore-operations@git+https://github.com/Luthaf/equistore.git@torch-core-classes#subdirectory=python/equistore-operations
