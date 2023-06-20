@@ -29,9 +29,7 @@ class TestStandardScaler:
     @pytest.mark.parametrize("with_mean", [True, False])
     @pytest.mark.parametrize("with_std", [True, False])
     def test_standard_scaler_transform(self, with_mean, with_std):
-        parameter_keys = ["values", "positions"]
         st = StandardScaler(
-            parameter_keys=parameter_keys,
             with_mean=with_mean,
             with_std=with_std,
             column_wise=False,
@@ -54,8 +52,7 @@ class TestStandardScaler:
                 rtol=self.relative_tolerance,
             )
 
-        parameter_keys.remove("values")
-        for parameter in parameter_keys:
+        for parameter in X_t[0].gradients_list():
             X_grad = X_t[0].gradient(parameter)
             X_grad = X_grad.values.reshape(-1, X_grad.values.shape[-1])
             if with_mean:
@@ -71,9 +68,7 @@ class TestStandardScaler:
     @pytest.mark.parametrize("with_mean", [True, False])
     @pytest.mark.parametrize("with_std", [True, False])
     def test_standard_scaler_inverse_transform(self, with_mean, with_std):
-        parameter_keys = ["values", "positions"]
         st = StandardScaler(
-            parameter_keys=parameter_keys,
             with_mean=with_mean,
             with_std=with_std,
             column_wise=False,
@@ -87,8 +82,7 @@ class TestStandardScaler:
             rtol=self.relative_tolerance,
         )
 
-        parameter_keys.remove("values")
-        for parameter in parameter_keys:
+        for parameter in self.X[0].gradients_list():
             X_grad = self.X[0].gradient(parameter)
             assert_allclose(
                 X_grad.values,
