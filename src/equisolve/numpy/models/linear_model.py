@@ -291,7 +291,8 @@ class _Ridge(_Estimator):
         self._validate_data(X, y)
         self._validate_params(X, alpha, sample_weight)
 
-        # Remove all gradients here. This is a workaround for now....
+        # Remove all gradients here. This is a workaround until we can exclude gradients
+        # for metadata check (see equistore issue #285 for details)
         alpha = equistore.remove_gradients(alpha)
 
         weights_blocks = []

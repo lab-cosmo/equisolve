@@ -31,13 +31,10 @@ def array_from_block(block: TensorBlock) -> np.ndarray:
     This function is used for creating the X and the y for Linear models. It may not
     work for Kernel models.
     """
-    M = []
-    for parameter in ["values"] + block.gradients_list():
-        if parameter == "values":
-            values = block.values
-        else:
-            values = block.gradient(parameter).values
-        M.append(values.reshape(np.prod(values.shape[:-1]), values.shape[-1]))
+    M = [block.values.reshape(-1, block.values.shape[-1])]
+    for parameter in block.gradients_list():
+        values = block.gradient(parameter).values
+        M.append(values.reshape(-1, values.shape[-1]))
     return np.vstack(M)
 
 

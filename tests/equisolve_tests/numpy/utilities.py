@@ -88,5 +88,5 @@ def tensor_to_tensormap(a: np.ndarray, key_name: str = "keys") -> TensorMap:
     for values in a:
         blocks.append(equistore.block_from_array(values))
 
-    keys = Labels([key_name], np.arange(len(blocks)).reshape(-1, 1))
+    keys = Labels.arange(key_name, len(blocks))
     return TensorMap(keys, blocks)
