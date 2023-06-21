@@ -127,13 +127,9 @@ print(y[0])
 # -------------------
 #
 # We first initilize the :class:`equisolve.numpy.models.linear_model.Ridge`
-# object. A mandatory parameter are the ``parameter_keys`` determining with
-# respect to which parameters the regression or fit is
-# performed. Here, we choose a regression wrt. to ``"values"`` (energies) and
-# ``"positions"`` (forces).
+# object. We automically learn on forces if forces are present.
 
-
-clf = Ridge(parameter_keys=["values", "positions"])
+clf = Ridge()
 
 # %%
 #
