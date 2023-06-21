@@ -6,7 +6,7 @@
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
 
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import equistore
 import numpy as np
@@ -16,7 +16,7 @@ from equistore import Labels, TensorBlock, TensorMap
 from ... import HAS_TORCH
 from ...module import NumpyModule, _Estimator
 from ...utils.metrics import rmse
-from ..utils import block_to_array, dict_to_tensor_map, tensor_map_to_dict
+from ..utils import array_from_block, dict_to_tensor_map, tensor_map_to_dict
 
 
 class _Ridge(_Estimator):
@@ -34,21 +34,9 @@ class _Ridge(_Estimator):
     Ridge will regress a model for each block in X. If a block contains components
     the component values will be stacked along the sample dimension for the fit.
     Therefore, the corresponding weights will be the same for each component.
-
-    :param parameter_keys:
-        Parameters to perform the regression for. Examples are ``"values"``,
-        ``"positions"``, ``"cell"`` or a combination of these.
     """
 
-    def __init__(
-        self,
-        parameter_keys: Union[List[str], str] = None,
-    ) -> None:
-        if type(parameter_keys) not in (list, tuple, np.ndarray):
-            self.parameter_keys = [parameter_keys]
-        else:
-            self.parameter_keys = parameter_keys
-
+    def __init__(self) -> None:
         self._weights = None
 
     def _validate_data(self, X: TensorMap, y: Optional[TensorMap] = None) -> None:
@@ -126,16 +114,16 @@ class _Ridge(_Estimator):
         # Convert TensorMaps into arrays for processing them with NumPy.
 
         # X_arr has shape of (n_targets, n_properties)
-        X_arr = block_to_array(X, self.parameter_keys)
+        X_arr = array_from_block(X)
 
         # y_arr has shape lentgth of n_targets
-        y_arr = block_to_array(y, self.parameter_keys)
+        y_arr = array_from_block(y)
 
         # sw_arr has shape of (n_samples, 1)
-        sw_arr = block_to_array(sample_weight, self.parameter_keys)
+        sw_arr = array_from_block(sample_weight)
 
         # alpha_arr has shape of (1, n_properties)
-        alpha_arr = block_to_array(alpha, ["values"])
+        alpha_arr = array_from_block(alpha)
 
         # Flatten into 1d arrays
         y_arr = y_arr.ravel()
@@ -241,6 +229,10 @@ class _Ridge(_Estimator):
     ) -> None:
         """Fit a regression model to each block in `X`.
 
+        Ridge takes all available values and gradients in the provided TensorMap for the
+        fit. Gradients can be exlcuded from the fit if removed from the TensorMap.
+        See :py:func:`equistore.remove_gradients` for details.
+
         :param X:
             training data
         :param y:
@@ -298,6 +290,10 @@ class _Ridge(_Estimator):
 
         self._validate_data(X, y)
         self._validate_params(X, alpha, sample_weight)
+
+        # Remove all gradients here. This is a workaround until we can exclude gradients
+        # for metadata check (see equistore issue #285 for details)
+        alpha = equistore.remove_gradients(alpha)
 
         weights_blocks = []
         for key, X_block in X:
@@ -357,24 +353,18 @@ class _Ridge(_Estimator):
 
 
 class NumpyRidge(_Ridge, NumpyModule):
-    def __init__(
-        self,
-        parameter_keys: Union[List[str], str] = None,
-    ) -> None:
+    def __init__(self) -> None:
         NumpyModule.__init__(self)
-        _Ridge.__init__(self, parameter_keys)
+        _Ridge.__init__(self)
 
 
 if HAS_TORCH:
     import torch
 
     class TorchRidge(_Ridge, torch.nn.Module):
-        def __init__(
-            self,
-            parameter_keys: Union[List[str], str] = None,
-        ) -> None:
+        def __init__(self) -> None:
             torch.nn.Module.__init__(self)
-            _Ridge.__init__(self, parameter_keys)
+            _Ridge.__init__(self)
 
     Ridge = TorchRidge
 else:

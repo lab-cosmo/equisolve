@@ -5,11 +5,11 @@
 #
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
+import equistore
 import numpy as np
 from equistore import Labels, TensorBlock, TensorMap
 from numpy.testing import assert_allclose, assert_equal
 
-from equisolve.numpy.utils import matrix_to_block, tensor_to_tensormap
 from equisolve.utils import rmse
 
 
@@ -19,8 +19,14 @@ class Testrmse:
         y_true_data = np.array([[0.5, 1], [-1, 1], [7, -6]])[:, :, np.newaxis]
         y_pred_data = np.array([[0, 2], [-1, 2], [8, -5]])[:, :, np.newaxis]
 
-        y_true = tensor_to_tensormap(y_true_data)
-        y_pred = tensor_to_tensormap(y_pred_data)
+        y_true = TensorMap(
+            Labels.arange("key", 3),
+            [equistore.block_from_array(y) for y in y_true_data],
+        )
+        y_pred = TensorMap(
+            Labels.arange("key", 3),
+            [equistore.block_from_array(y) for y in y_pred_data],
+        )
 
         assert_allclose(
             rmse(y_true, y_pred, parameter_key="values"),
@@ -40,7 +46,7 @@ class Testrmse:
 
         # Create training data
         X_values = X_arr[:num_targets]
-        X_block = matrix_to_block(X_values)
+        X_block = equistore.block_from_array(X_values)
 
         X_gradient_values = X_arr[num_targets:].reshape(num_targets, 3, num_properties)
 

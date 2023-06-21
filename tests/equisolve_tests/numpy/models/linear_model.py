@@ -5,13 +5,15 @@
 #
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
+import equistore
 import numpy as np
 import pytest
 from equistore import Labels, TensorBlock, TensorMap
 from numpy.testing import assert_allclose, assert_equal
 
 from equisolve.numpy.models import Ridge
-from equisolve.numpy.utils import matrix_to_block, tensor_to_tensormap
+
+from ..utilities import tensor_to_tensormap
 
 
 def numpy_solver(X, y, sample_weights, regularizations):
@@ -73,7 +75,7 @@ class TestRidge:
         self, X_arr, y_arr, alpha_arr, sw_arr=None, solver="auto"
     ):
         X, y, alpha, sw = self.to_equistore(X_arr, y_arr, alpha_arr, sw_arr)
-        clf = Ridge(parameter_keys="values")
+        clf = Ridge()
         clf.fit(X=X, y=y, alpha=alpha, sample_weight=sw, solver=solver)
         return clf
 
@@ -104,7 +106,7 @@ class TestRidge:
         X = tensor_to_tensormap(X_arr)
         y = tensor_to_tensormap(y_arr)
 
-        clf = Ridge(parameter_keys="values")
+        clf = Ridge()
         clf.fit(X=X, y=y, alpha=alpha, sample_weight=sample_weight, solver=solver)
 
         assert len(clf.weights) == 2
@@ -126,7 +128,7 @@ class TestRidge:
         X = tensor_to_tensormap(X_arr)
         y = tensor_to_tensormap(y_arr)
 
-        clf = Ridge(parameter_keys="values")
+        clf = Ridge()
         clf.fit(X=X, y=y, alpha=1.0)
         clf.fit(X=X, y=y, alpha=1.0)
 
@@ -491,7 +493,7 @@ class TestRidge:
         y = tensor_to_tensormap(y_arr)
         alpha = tensor_to_tensormap(alpha_arr)
 
-        clf = Ridge(parameter_keys="values")
+        clf = Ridge()
 
         weights_arr = clf.fit(X=X, y=y, alpha=alpha).weights
         weights_float = clf.fit(X=X, y=y, alpha=2.0).weights
@@ -506,16 +508,13 @@ class TestRidge:
         X = tensor_to_tensormap(X_arr)
         y = tensor_to_tensormap(y_arr)
 
-        clf = Ridge(parameter_keys="values")
+        clf = Ridge()
 
         with pytest.raises(ValueError, match="alpha must either be a float or"):
             clf.fit(X=X, y=y, alpha="foo")
 
-    @pytest.mark.parametrize(
-        "parameter_keys", [("values"), ("values", "positions"), ("positions")]
-    )
-    def test_parameter_keys(self, parameter_keys):
-        """Test regression with different parameter_keys.
+    def test_force_regression(self):
+        """Test regression with forces.
 
         Using a system with one atom per structure.
         """
@@ -528,7 +527,7 @@ class TestRidge:
 
         # Create training data
         X_values = X_arr[:num_targets]
-        X_block = matrix_to_block(X_values)
+        X_block = equistore.block_from_array(X_values)
 
         X_gradient_values = X_arr[num_targets:].reshape(num_targets, 3, num_properties)
 
@@ -551,7 +550,7 @@ class TestRidge:
         y_arr = X_arr @ w_exact
 
         y_values = y_arr[:num_targets].reshape(-1, 1)
-        y_block = matrix_to_block(y_values)
+        y_block = equistore.block_from_array(y_values)
 
         y_gradient_values = y_arr[num_targets:].reshape(num_targets, 3, 1)
 
@@ -566,7 +565,7 @@ class TestRidge:
         y = TensorMap(Labels.single(), [y_block])
 
         # Use no regularization.
-        clf = Ridge(parameter_keys=parameter_keys)
+        clf = Ridge()
         clf.fit(X=X, y=y, alpha=0.0)
 
         assert_allclose(
@@ -576,13 +575,11 @@ class TestRidge:
         # Test prediction
         X_pred = clf.predict(X)
 
-        if "values" in parameter_keys:
-            assert_allclose(X_pred[0].values, y[0].values)
-        if "positions" in parameter_keys:
-            assert_allclose(
-                X_pred[0].gradient("positions").values,
-                y[0].gradient("positions").values,
-            )
+        assert_allclose(X_pred[0].values, y[0].values)
+        assert_allclose(
+            X_pred[0].gradient("positions").values,
+            y[0].gradient("positions").values,
+        )
 
     def test_components(self):
         """Test regressiosn with components."""
@@ -607,7 +604,7 @@ class TestRidge:
         )
         y = TensorMap(Labels.single(), [y_block])
 
-        clf = Ridge(parameter_keys="values")
+        clf = Ridge()
         clf.fit(X=X, y=y)
 
         assert clf.weights.components_names == [("property",)]
@@ -631,7 +628,7 @@ class TestRidge:
         alpha = tensor_to_tensormap(alpha_arr)
         sw = tensor_to_tensormap(sw_arr)
 
-        clf = Ridge(parameter_keys="values")
+        clf = Ridge()
         # accepts error message of the form "Metadata *something* does not agree!"
         with pytest.raises(ValueError, match="^Metadata .* does not agree!$"):
             clf.fit(X=X, y=y, alpha=alpha, sample_weight=sw)
@@ -644,7 +641,7 @@ class TestRidge:
             alpha_arr=np.ones(self.num_properties[0] + 1),
         )
 
-        clf = Ridge(parameter_keys="values")
+        clf = Ridge()
         # accepts error message of the form "Metadata *something* does not agree!"
         with pytest.raises(ValueError, match="^Metadata .* does not agree!$"):
             clf.fit(X=X, y=y, alpha=alpha)
@@ -660,12 +657,12 @@ class TestRidge:
             sw_arr=np.ones(self.num_targets[0] + extra_samples[1]),
         )
 
-        clf = Ridge(parameter_keys="values")
+        clf = Ridge()
         with pytest.raises(ValueError, match="^Metadata .* does not agree!$"):
             clf.fit(X=X, y=y, alpha=alpha, sample_weight=sw)
 
     def test_error_no_weights(self):
         """Test error raise if fit method was not called."""
-        clf = Ridge(parameter_keys="values")
+        clf = Ridge()
         with pytest.raises(ValueError, match="No weights"):
             clf.predict(1)

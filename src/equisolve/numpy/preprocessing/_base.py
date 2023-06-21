@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import Optional
 
 import equistore
 import numpy as np
@@ -6,16 +6,12 @@ from equistore import Labels, TensorBlock, TensorMap
 
 from ... import HAS_TORCH
 from ...module import NumpyModule, _Transformer
-from ..utils import block_to_array, dict_to_tensor_map, tensor_map_to_dict
+from ..utils import array_from_block, dict_to_tensor_map, tensor_map_to_dict
 
 
 class _StandardScaler(_Transformer):
     """Standardize features by removing the mean and scaling to unit variance.
 
-    :param parameter_keys:
-        Parameters to perform the standardization for.
-        Examples are ``"values"``, ``"positions"``,
-        ``"cell"`` or a combination of these.
     :param with_mean:
         If ``True``, center the data before scaling. If ``False``,
         keep the mean intact. Because all operations are consistent
@@ -37,18 +33,12 @@ class _StandardScaler(_Transformer):
 
     def __init__(
         self,
-        parameter_keys: Union[List[str], str],
         with_mean: bool = True,
         with_std: bool = True,
         column_wise: bool = False,
         rtol: float = 0.0,
         atol: float = 1e-12,
     ):
-        if type(parameter_keys) not in (list, tuple, np.ndarray):
-            self.parameter_keys = [parameter_keys]
-        else:
-            self.parameter_keys = parameter_keys
-
         self.with_mean = with_mean
         self.with_std = with_std
         self.column_wise = column_wise
@@ -103,78 +93,57 @@ class _StandardScaler(_Transformer):
         for key, X_block in X:
             # if values not in parameter_keys, we create empty tensor block to
             # attach gradients
-            if "values" in self.parameter_keys:
-                X_mat = block_to_array(X_block, ["values"])
+            X_mat = X_block.values
 
-                if sample_weights is not None:
-                    sw_block = sample_weights.block(key)
-                    sample_weights = block_to_array(sw_block, ["values"])
+            if sample_weights is not None:
+                sw_block = sample_weights.block(key)
+                sample_weights = sw_block.values
 
-                if self.with_mean:
-                    mean_values = np.average(X_mat, weights=sample_weights, axis=0)
-                else:
-                    mean_values = np.zeros(self.n_properties_)
-
-                mean_block = TensorBlock(
-                    values=mean_values.reshape((1,) + mean_values.shape),
-                    samples=Labels(["sample"], np.array([[0]], dtype=np.int32)),
-                    components=[],
-                    properties=X_block.properties,
-                )
-
-                if self.with_std:
-                    X_mean = np.average(X_mat, weights=sample_weights, axis=0)
-                    var = np.average((X_mat - X_mean) ** 2, axis=0)
-
-                    if self.column_wise:
-                        if np.any(var < self.atol + abs(X_mean) * self.rtol):
-                            raise ValueError(
-                                "Cannot normalize a property with zero variance"
-                            )
-                        scale_values = np.sqrt(var).reshape(1, var.shape[0])
-                    else:
-                        var_sum = var.sum()
-                        if var_sum < abs(np.mean(X_mean)) * self.rtol + self.atol:
-                            raise ValueError(
-                                "Cannot normalize a matrix with zero variance"
-                            )
-                        scale_values = np.sqrt(var_sum).reshape(1, 1)
-                else:
-                    scale_values = np.ones((1, 1))
-
-                scale_block = TensorBlock(
-                    values=scale_values.reshape((1, 1)),
-                    samples=Labels.single(),
-                    components=[],
-                    properties=Labels.single(),
-                )
+            if self.with_mean:
+                mean_values = np.average(X_mat, weights=sample_weights, axis=0)
             else:
-                # empty tensor block
-                mean_block = TensorBlock(
-                    values=np.empty((0, 1)),
-                    samples=Labels(
-                        names=X.sample_names, values=np.empty((0, 1), dtype=np.int32)
-                    ),
-                    components=[],
-                    properties=Labels.single(),
-                )
-                scale_block = TensorBlock(
-                    values=np.empty((0, 1)),
-                    samples=Labels(
-                        names=X.sample_names, values=np.empty((0, 1), dtype=np.int32)
-                    ),
-                    components=[],
-                    properties=Labels.single(),
-                )
+                mean_values = np.zeros(self.n_properties_)
+
+            mean_block = TensorBlock(
+                values=mean_values.reshape((1,) + mean_values.shape),
+                samples=Labels(["sample"], np.array([[0]], dtype=np.int32)),
+                components=[],
+                properties=X_block.properties,
+            )
+
+            if self.with_std:
+                X_mean = np.average(X_mat, weights=sample_weights, axis=0)
+                var = np.average((X_mat - X_mean) ** 2, axis=0)
+
+                if self.column_wise:
+                    if np.any(var < self.atol + abs(X_mean) * self.rtol):
+                        raise ValueError(
+                            "Cannot normalize a property with zero variance"
+                        )
+                    scale_values = np.sqrt(var).reshape(1, var.shape[0])
+                else:
+                    var_sum = var.sum()
+                    if var_sum < abs(np.mean(X_mean)) * self.rtol + self.atol:
+                        raise ValueError("Cannot normalize a matrix with zero variance")
+                    scale_values = np.sqrt(var_sum).reshape(1, 1)
+            else:
+                scale_values = np.ones((1, 1))
+
+            scale_block = TensorBlock(
+                values=scale_values.reshape((1, 1)),
+                samples=Labels.single(),
+                components=[],
+                properties=Labels.single(),
+            )
 
             for parameter in X_block.gradients_list():
-                X_mat = block_to_array(X_block, [parameter])
-                # X_gradient = X_block.gradient(parameter)
+                values = X_block.gradient(parameter).values
+                X_mat = values.reshape(np.prod(values.shape[:-1]), values.shape[-1])
 
                 if sample_weights is not None:
                     sw_block = sample_weights.block(key)
-                    sample_weights = block_to_array(sw_block, [parameter])
-                if self.with_mean and (parameter in self.parameter_keys):
+                    sample_weights = array_from_block(sw_block, [parameter])
+                if self.with_mean:
                     mean_values = np.average(X_mat, weights=sample_weights, axis=0)
                     mean_values = mean_values.reshape((1, 1) + mean_values.shape)
                 else:
@@ -188,7 +157,7 @@ class _StandardScaler(_Transformer):
                 )
                 mean_block.add_gradient(parameter, gradient)
 
-                if self.with_std and (parameter in self.parameter_keys):
+                if self.with_std:
                     X_mean = np.average(X_mat, weights=sample_weights, axis=0)
                     var = np.average((X_mat - X_mean) ** 2, axis=0)
 
@@ -337,7 +306,6 @@ class _StandardScaler(_Transformer):
 class NumpyStandardScaler(_StandardScaler, NumpyModule):
     def __init__(
         self,
-        parameter_keys: Union[List[str], str],
         with_mean: bool = True,
         with_std: bool = True,
         column_wise: bool = False,
@@ -345,9 +313,7 @@ class NumpyStandardScaler(_StandardScaler, NumpyModule):
         atol: float = 1e-12,
     ) -> None:
         NumpyModule.__init__(self)
-        _StandardScaler.__init__(
-            self, parameter_keys, with_mean, with_std, column_wise, rtol, atol
-        )
+        _StandardScaler.__init__(self, with_mean, with_std, column_wise, rtol, atol)
 
 
 if HAS_TORCH:
@@ -356,7 +322,6 @@ if HAS_TORCH:
     class TorchStandardScaler(_StandardScaler, torch.nn.Module):
         def __init__(
             self,
-            parameter_keys: Union[List[str], str],
             with_mean: bool = True,
             with_std: bool = True,
             column_wise: bool = False,
@@ -364,9 +329,7 @@ if HAS_TORCH:
             atol: float = 1e-12,
         ) -> None:
             torch.nn.Module.__init__(self)
-            _StandardScaler.__init__(
-                self, parameter_keys, with_mean, with_std, column_wise, rtol, atol
-            )
+            _StandardScaler.__init__(self, with_mean, with_std, column_wise, rtol, atol)
 
     StandardScaler = TorchStandardScaler
 else:

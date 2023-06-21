@@ -10,10 +10,10 @@ import pytest
 from equistore import Labels, TensorBlock
 from numpy.testing import assert_equal
 
-from equisolve.numpy.utils import block_to_array
+from equisolve.numpy.utils import array_from_block
 
 
-class Testblock_to_array:
+class Testarray_from_block:
     """Test the conversion of a TensorBlock into a numpy array."""
 
     n_samples = 3
@@ -32,32 +32,35 @@ class Testblock_to_array:
         )
 
     @pytest.fixture
-    def block(self, values, gradient_values):
+    def block(self, values):
         properties = Labels(["property"], np.arange(self.n_properties).reshape(-1, 1))
         samples = Labels(["sample"], np.arange(self.n_samples).reshape(-1, 1))
 
         block = TensorBlock(
             values=values, samples=samples, components=[], properties=properties
         )
+        return block
 
+    @pytest.fixture
+    def block_gradient(self, block, gradient_values):
         gradient = TensorBlock(
             values=gradient_values,
-            samples=samples,
+            samples=block.samples,
             components=[Labels(["direction"], np.arange(3).reshape(-1, 1))],
             properties=block.properties,
         )
-        block.add_gradient("positions", gradient)
 
+        block.add_gradient("positions", gradient)
         return block
 
     def test_values(self, block, values):
         """Test extraction of values"""
-        block_mat = block_to_array(block, parameter_keys=["values"])
+        block_mat = array_from_block(block)
 
         assert_equal(block_mat, values)
 
-    def test_values_gradients(self, block, values, gradient_values):
-        block_mat = block_to_array(block, parameter_keys=["values", "positions"])
+    def test_values_gradients(self, block_gradient, values, gradient_values):
+        block_mat = array_from_block(block_gradient)
 
         assert_equal(
             block_mat,
@@ -81,7 +84,7 @@ class Testblock_to_array:
             properties=properties,
         )
 
-        block_mat = block_to_array(block, parameter_keys=["values"])
+        block_mat = array_from_block(block)
 
         assert_equal(
             block_mat,
