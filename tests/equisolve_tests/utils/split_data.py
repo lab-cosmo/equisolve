@@ -302,7 +302,7 @@ def check_values(
     """
     for i, indices in enumerate(target_indices):
         ref_tensor = equistore.slice(original_tensor, axis="samples", labels=indices)
-        for key, ref_block in ref_tensor:
+        for key, ref_block in ref_tensor.items():
             check_block = split_tensors[0][i][key]
             if not np.all(ref_block.values == check_block.values):
                 pytest.fail(f"Expected {ref_block.values}, got {check_block.values}")
@@ -670,7 +670,7 @@ class TestSplitDataErrors:
         # Passing non-existent names
         axis = "samples"
         names = ["not_samples"]
-        tmp_names = ("samples",)
+        tmp_names = ["samples"]
         msg = (
             f"the passed `TensorMap` objects have {axis} names {tmp_names}"
             f" that do not match the one passed in `names` {names}"

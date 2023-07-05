@@ -607,7 +607,7 @@ class TestRidge:
         clf = Ridge()
         clf.fit(X=X, y=y)
 
-        assert clf.weights.components_names == [("property",)]
+        assert clf.weights.components_names == [["property"]]
         assert clf.weights[0].values.shape == (1, 1, 1)
 
     @pytest.mark.parametrize(

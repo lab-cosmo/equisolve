@@ -20,11 +20,11 @@ class Testrmse:
         y_pred_data = np.array([[0, 2], [-1, 2], [8, -5]])[:, :, np.newaxis]
 
         y_true = TensorMap(
-            Labels.arange("key", 3),
+            Labels.range("key", end=3),
             [equistore.block_from_array(y) for y in y_true_data],
         )
         y_pred = TensorMap(
-            Labels.arange("key", 3),
+            Labels.range("key", end=3),
             [equistore.block_from_array(y) for y in y_pred_data],
         )
 

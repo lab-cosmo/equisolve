@@ -84,7 +84,7 @@ class _Ridge(_Estimator):
                 "Metadata (samples, components) of X and sample_weight does not agree!"
             )
 
-        for key, alpha_block in alpha:
+        for key, alpha_block in alpha.items():
             if len(alpha_block.samples) != 1:
                 raise ValueError(
                     "Only one sample is allowed for regularization. Given "
@@ -296,7 +296,7 @@ class _Ridge(_Estimator):
         alpha = equistore.remove_gradients(alpha)
 
         weights_blocks = []
-        for key, X_block in X:
+        for key, X_block in X.items():
             y_block = y.block(key)
             alpha_block = alpha.block(key)
             sw_block = sample_weight.block(key)

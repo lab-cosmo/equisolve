@@ -6,8 +6,10 @@
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
 import equistore
+import numpy as np
 import pytest
 import skmatter.feature_selection
+from equistore import Labels
 from numpy.testing import assert_equal
 
 from equisolve.numpy.feature_selection import CUR, FPS
@@ -32,8 +34,14 @@ class TestSelection:
         skmatter_selector = skmatter_selector_class(n_to_select=2)
         skmatter_selector.fit(X[0].values)
         skmatter_support = skmatter_selector.get_support(indices=True)
+        skmatter_support_labels = Labels(
+            names=["properties"],
+            values=np.array(
+                [[support_i] for support_i in skmatter_support], dtype=np.int32
+            ),
+        )
 
-        assert_equal(support, skmatter_support)
+        assert_equal(support, skmatter_support_labels)
 
     @pytest.mark.parametrize(
         "selector_class, skmatter_selector_class",

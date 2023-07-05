@@ -31,7 +31,7 @@ def rmse(y_true: TensorMap, y_pred: TensorMap, parameter_key: str) -> List[float
         raise ValueError("Metadata of X and sample_weight does not agree!")
 
     loss = []
-    for key, y_pred_block in y_pred:
+    for key, y_pred_block in y_pred.items():
         y_true_block = y_true.block(key)
 
         if parameter_key == "values":

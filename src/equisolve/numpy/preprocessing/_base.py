@@ -90,7 +90,7 @@ class _StandardScaler(_Transformer):
         scale_blocks = []
 
         # replace with equistore oprations see issue #18
-        for key, X_block in X:
+        for key, X_block in X.items():
             # if values not in parameter_keys, we create empty tensor block to
             # attach gradients
             X_mat = X_block.values
@@ -222,7 +222,7 @@ class _StandardScaler(_Transformer):
             )
 
         blocks = []
-        for key, X_block in X:
+        for key, X_block in X.items():
             mean_block = self.mean_map_.block(key)
             scale_block = self.scale_map_.block(key)
 
@@ -274,7 +274,7 @@ class _StandardScaler(_Transformer):
             )
 
         blocks = []
-        for key, X_block in X:
+        for key, X_block in X.items():
             mean_block = self.mean_map_.block(key)
             scale_block = self.scale_map_.block(key)
 
