@@ -82,23 +82,23 @@ class TestConvert:
 
         samples = block.gradient("positions").samples
 
-        assert samples.names == (
+        assert samples.names == [
             "sample",
             "structure",
             "atom",
-        )
+        ]
 
         assert_equal(
-            samples.tolist(),
+            samples.values.tolist(),
             [
-                (0, 0, 0),
-                (0, 0, 1),
-                (0, 0, 2),
-                (0, 0, 3),
-                (1, 1, 0),
-                (1, 1, 1),
-                (1, 1, 2),
-                (1, 1, 3),
+                [0, 0, 0],
+                [0, 0, 1],
+                [0, 0, 2],
+                [0, 0, 3],
+                [1, 1, 0],
+                [1, 1, 1],
+                [1, 1, 2],
+                [1, 1, 3],
             ],
         )
 
@@ -110,9 +110,9 @@ class TestConvert:
 
         samples = block.gradient("cell").samples
 
-        assert samples.names == ("sample",)
+        assert samples.names == ["sample"]
 
-        assert_equal(samples.tolist(), [(0,), (1,)])
+        assert_equal(samples.values.tolist(), [[0], [1]])
 
     def test_position_gradient_wrong_n_samples(self, energies):
         """Test error raise if the length values and positions_gradients not equal."""

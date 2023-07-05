@@ -70,16 +70,20 @@ class GreedySelector:
             raise ValueError("Only blocks with no components are supported.")
 
         blocks = []
-        for _, block in X:
+        for _, block in X.items():
             selector = self.selector_class(**self.selector_arguments)
             selector.fit(block.values, warm_start=warm_start)
             mask = selector.get_support()
 
             if self._selection_type == "feature":
                 samples = Labels.single()
-                properties = block.properties[mask]
+                properties = Labels(
+                    names=block.properties.names, values=block.properties.values[mask]
+                )
             elif self._selection_type == "sample":
-                samples = block.samples[mask]
+                samples = Labels(
+                    names=block.samples.names, values=block.samples.values[mask]
+                )
                 properties = Labels.single()
 
             blocks.append(
@@ -104,7 +108,7 @@ class GreedySelector:
             The selected subset of the input.
         """
         blocks = []
-        for key, block in X:
+        for key, block in X.items():
             block_support = self.support.block(key)
 
             if self._selection_type == "feature":

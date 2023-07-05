@@ -204,7 +204,9 @@ def split_data(
     # Shuffle the unique indices according to the random seed if specified
     if seed is not None:
         rng = np.random.default_rng(seed)
-        rng.shuffle(unique_idxs)
+        shuffled_values = unique_idxs.values.copy()
+        rng.shuffle(shuffled_values)
+        unique_idxs = Labels(names=unique_idxs.names, values=shuffled_values)
 
     # Must be at least as many unique indices as groups
     n_indices = len(unique_idxs)
@@ -311,19 +313,26 @@ def _cascade_round(array: np.ndarray) -> np.ndarray:
     return np.array(rounded_array)
 
 
-def _group_indices(indices: Labels, group_sizes: List[int]) -> Labels:
+def _group_indices(indices: Labels, group_sizes: List[int]) -> List[Labels]:
     """
     Splits `indices` into smaller groups according to the sizes specified in
     `group_sizes`, and returned as a list of :py:class:`Labels` objects.
     """
     # Group the indices
-    grouped_labels = []
+    grouped_labels_values = []
     prev_size = 0
     for size in group_sizes:
-        grouped_labels.append(indices[prev_size : prev_size + size])
+        grouped_labels_values.append(
+            indices.values[prev_size : prev_size + size].tolist()
+        )
         prev_size += size
-
-    return grouped_labels
+    return [
+        Labels(
+            names=indices.names,
+            values=np.array(grouped_labels_values[i], dtype=indices.values.dtype),
+        )
+        for i in range(len(grouped_labels_values))
+    ]
 
 
 def _check_labels_equivalent(
