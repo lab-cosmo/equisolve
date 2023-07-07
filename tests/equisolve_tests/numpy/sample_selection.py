@@ -29,19 +29,20 @@ class TestSelection:
     def test_fit(self, X, selector_class, skmatter_selector_class):
         selector = selector_class(n_to_select=2)
         selector.fit(X)
-        support = selector.support[0].samples["structure"]
+        support = selector.support[0].samples
 
         skmatter_selector = skmatter_selector_class(n_to_select=2)
         skmatter_selector.fit(X[0].values)
         skmatter_support = skmatter_selector.get_support(indices=True)
         skmatter_support_labels = Labels(
-            names=["structure"],
+            names=["sample", "structure"],
             values=np.array(
-                [[support_i] for support_i in skmatter_support], dtype=np.int32
+                [[support_i, support_i] for support_i in skmatter_support],
+                dtype=np.int32,
             ),
         )
 
-        assert_equal(support, skmatter_support_labels)
+        assert support == skmatter_support_labels
 
     @pytest.mark.parametrize(
         "selector_class, skmatter_selector_class",

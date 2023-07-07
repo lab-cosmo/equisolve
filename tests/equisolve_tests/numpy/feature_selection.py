@@ -29,7 +29,7 @@ class TestSelection:
     def test_fit(self, X, selector_class, skmatter_selector_class):
         selector = selector_class(n_to_select=2)
         selector.fit(X)
-        support = selector.support[0].properties["properties"]
+        support = selector.support[0].properties
 
         skmatter_selector = skmatter_selector_class(n_to_select=2)
         skmatter_selector.fit(X[0].values)
@@ -41,7 +41,7 @@ class TestSelection:
             ),
         )
 
-        assert_equal(support, skmatter_support_labels)
+        assert support == skmatter_support_labels
 
     @pytest.mark.parametrize(
         "selector_class, skmatter_selector_class",
