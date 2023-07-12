@@ -51,7 +51,7 @@ class _StandardScaler(_Transformer):
         :param X: training data to check
         :param y: target data to check
         """
-        if len(X.components_names) != 0:
+        if len(X.component_names) != 0:
             raise ValueError("X contains components")
 
         if y is not None:
@@ -60,7 +60,7 @@ class _StandardScaler(_Transformer):
                     "Metadata (samples) of X and sample_weight does not agree!"
                 )
 
-            if len(y.components_names) != 0:
+            if len(y.component_names) != 0:
                 raise ValueError("y contains components")
 
     def fit(

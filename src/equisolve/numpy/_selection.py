@@ -85,12 +85,12 @@ class GreedySelector:
             increasing `n_to_select`. Assumes it is called with the same X.
         """
         # Check that we have only 0 or 1 comoponent axes
-        if len(X.components_names) == 0:
+        if len(X.component_names) == 0:
             has_components = False
-        elif len(X.components_names) == 1:
+        elif len(X.component_names) == 1:
             has_components = True
         else:
-            assert len(X.components_names) > 1
+            assert len(X.component_names) > 1
             raise ValueError("Can only handle TensorMaps with a single component axis.")
 
         support_blocks = []

@@ -389,9 +389,7 @@ def _check_args(
     if not all([isinstance(name, str) for name in names]):
         raise TypeError(f"`names` must be a list of str, got {type(names)}")
     for tensor in tensors:
-        tmp_names = (
-            tensor.samples_names if axis == "samples" else tensor.properties_names
-        )
+        tmp_names = tensor.sample_names if axis == "samples" else tensor.property_names
         for name in names:
             if name not in tmp_names:
                 raise ValueError(

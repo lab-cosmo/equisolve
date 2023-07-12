@@ -485,7 +485,7 @@ class TestRidge:
 
         # Slice TensorMaps to do not start at sample 0.
         # Testing probable hardcoded sample
-        samples = Labels(names=X.samples_names, values=X[0].samples.values[1:])
+        samples = Labels(names=X.sample_names, values=X[0].samples.values[1:])
         kwargs = {"axis": "samples", "labels": samples}
         X = metatensor.slice(X, **kwargs)
         y = metatensor.slice(y, **kwargs)
@@ -604,7 +604,7 @@ class TestRidge:
         clf = Ridge()
         clf.fit(X=X, y=y)
 
-        assert clf.weights.components_names == ["property"]
+        assert clf.weights.component_names == ["property"]
         assert clf.weights[0].values.shape == (1, 1, 1)
 
     @pytest.mark.parametrize(
