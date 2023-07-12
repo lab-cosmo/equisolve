@@ -272,8 +272,8 @@ class _Ridge(_Estimator):
             # Create a TensorMap with a single sample and the same components and
             # properties as X
             samples = Labels(
-                names=X.samples_names,
-                values=np.zeros([1, len(X.samples_names)], dtype=int),
+                names=X.sample_names,
+                values=np.zeros([1, len(X.sample_names)], dtype=int),
             )
             new_blocks = []
             for X_block in X.blocks():

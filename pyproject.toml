@@ -43,13 +43,13 @@ keywords = [
 requires-python = ">=3.7"
 
 dependencies = [
-    "metatensor @ https://github.com/lab-cosmo/metatensor/archive/2248a3c.zip",
+    "metatensor",
     "numpy",
     "scipy",
     "skmatter"
 ]
 [project.optional-dependencies]
-torch = ["metatensor[torch] @ https://github.com/lab-cosmo/metatensor/archive/2248a3c.zip"]
+torch = ["metatensor[torch]"]
 
 [project.urls]
 homepage = "https://lab-cosmo.github.io/equisolve/latest/"
