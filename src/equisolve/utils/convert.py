@@ -47,7 +47,7 @@ def ase_to_tensormap(
     else:
         cell_gradients = None
 
-    return properties_to_tensormap(values, positions_gradients, cell_gradients)
+    return properties_to_tensormap(values, positions_gradients, cell_gradients,property_name=energy)
 
 
 def properties_to_tensormap(
@@ -55,6 +55,7 @@ def properties_to_tensormap(
     positions_gradients: List[np.ndarray] = None,
     cell_gradients: List[np.ndarray] = None,
     is_structure_property: bool = True,
+    property_name: str = "property",
 ) -> TensorMap:
     """Create a :class:`equistore.TensorMap` from array like properties.
 
@@ -94,7 +95,7 @@ def properties_to_tensormap(
         values=np.asarray(values).reshape(-1, 1),
         samples=Labels(["structure"], np.arange(n_structures).reshape(-1, 1)),
         components=[],
-        properties=Labels(["property"], np.array([(0,)])),
+        properties=Labels([property_name], np.array([(0,)])),
     )
 
     if positions_gradients is not None:
