@@ -43,14 +43,13 @@ def ase_to_tensormap(
         positions_gradients = None
 
     if stress is not None:
-        cell_gradients = [-f.arrays[stress] for f in frames]
+        cell_gradients = [-f.info[stress] for f in frames]
     else:
         cell_gradients = None
 
-    return properties_to_tensormap(values,
-                                   positions_gradients,
-                                   cell_gradients,
-                                   property_name=energy)
+    return properties_to_tensormap(
+        values, positions_gradients, cell_gradients, property_name=energy
+    )
 
 
 def properties_to_tensormap(

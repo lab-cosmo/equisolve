@@ -43,7 +43,7 @@ class TestConvert:
             frame = ase.Atoms(self.n_atoms * "H")
             frame.info["energy"] = energies[i]
             frame.arrays["forces"] = forces[i]
-            frame.arrays["stress"] = stress[i]
+            frame.info["stress"] = stress[i]
             frames.append(frame)
 
         property_tm = ase_to_tensormap(frames, "energy", "forces", "stress")
