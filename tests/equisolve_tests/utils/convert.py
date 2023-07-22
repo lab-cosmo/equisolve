@@ -9,6 +9,8 @@
 import ase
 import numpy as np
 import pytest
+from ase.calculators.calculator import Calculator, all_changes
+from ase.stress import voigt_6_to_full_3x3_stress
 from numpy.testing import assert_equal
 
 from equisolve.utils import ase_to_tensormap, properties_to_tensormap
@@ -35,7 +37,9 @@ class TestConvert:
 
     @pytest.fixture
     def stress(self):
-        return [i for i in self.rng.random([self.n_strucs, 3, 3])]
+        return [
+            voigt_6_to_full_3x3_stress(i) for i in self.rng.random([self.n_strucs, 6])
+        ]
 
     def test_ase_to_tensormap(self, energies, forces, stress):
         frames = []
@@ -57,6 +61,67 @@ class TestConvert:
             block.gradient("positions").values,
             -np.concatenate(forces, axis=0).reshape(-1, 3, 1),
         )
+        assert_equal(
+            block.gradient("cell").values, -np.array(stress).reshape(-1, 3, 3, 1)
+        )
+
+    def test_ase_to_tensormap_w_calculator(self, energies, forces, stress):
+        class CustomCalculator(Calculator):
+            implemented_properties = ("energy", "forces", "stress")
+
+            def __init__(self, energy, forces, stress, **kwargs):
+                Calculator.__init__(self, **kwargs)
+                self.energy = energy  # Predefined potential energy
+                self.forces = forces  # Predefined forces
+                self.stress = stress  # Predefined stress
+
+            def calculate(
+                self, atoms=None, properties=("energy"), system_changes=all_changes
+            ):
+                super().calculate(atoms, properties, system_changes)
+
+                self.results["energy"] = self.energy
+                self.results["forces"] = self.forces
+                self.results["stress"] = self.stress
+
+        frames = []
+        for i in range(len(energies)):
+            frame = ase.Atoms(self.n_atoms * "H")
+            frame.calc = CustomCalculator(energies[i], forces[i], stress[i])
+            frame.info["energy"] = energies[i]
+            frame.arrays["forces"] = forces[i]
+            frame.info["stress"] = stress[i]
+            frames.append(frame)
+
+        property_tm = ase_to_tensormap(frames, "energy", "forces", "stress")
+
+        # Use `[0]` function without parameters to check that TensorMap
+        # only has one block.
+        block = property_tm[0]
+
+        assert_equal(block.values, np.array(energies).reshape(-1, 1))
+        assert_equal(
+            block.gradient("positions").values,
+            -np.concatenate(forces, axis=0).reshape(-1, 3, 1),
+        )
+        assert_equal(
+            block.gradient("cell").values, -np.array(stress).reshape(-1, 3, 3, 1)
+        )
+
+        property_tm = ase_to_tensormap(frames)
+        block = property_tm[0]
+
+        assert_equal(block.values, np.array(energies).reshape(-1, 1))
+        assert_equal(
+            block.gradient("positions").values,
+            -np.concatenate(forces, axis=0).reshape(-1, 3, 1),
+        )
+
+        print(block.gradient("cell").values.shape)
+        print(np.array(stress).reshape(-1, 3, 3, 1).shape)
+
+        print(block.gradient("cell").values + np.array(stress).reshape(-1, 3, 3, 1))
+
         assert_equal(
             block.gradient("cell").values, -np.array(stress).reshape(-1, 3, 3, 1)
         )

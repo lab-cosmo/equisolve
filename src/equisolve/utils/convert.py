@@ -18,7 +18,8 @@ from equistore import Labels, TensorBlock, TensorMap
 def ase_to_tensormap(
     frames: List[ase.Atoms], energy: str = None, forces: str = None, stress: str = None
 ) -> TensorMap:
-    """Store informations from :class:`ase.Atoms` in a :class:`equistore.TensorMap`.
+    """Store informations from :class:`ase.Atoms`
+    in a :class:`equistore.TensorMap`.
 
     :param frames:
         ase.Atoms or list of ase.Atoms
@@ -35,17 +36,27 @@ def ase_to_tensormap(
     if not isinstance(frames, list):
         frames = [frames]
 
-    values = [f.info[energy] for f in frames]
+    if energy is not None:
+        values = [f.info[energy] for f in frames]
+    else:
+        energy = "energy"
+        values = [f.get_potential_energy() for f in frames]
 
     if forces is not None:
         positions_gradients = [-f.arrays[forces] for f in frames]
     else:
-        positions_gradients = None
+        try:
+            positions_gradients = [-f.get_forces() for f in frames]
+        except ase.ase.calculators.calculator.PropertyNotImplementedError:
+            positions_gradients = None
 
     if stress is not None:
         cell_gradients = [-f.info[stress] for f in frames]
     else:
-        cell_gradients = None
+        try:
+            cell_gradients = [-f.get_stress(voigt=False) for f in frames]
+        except ase.ase.calculators.calculator.PropertyNotImplementedError:
+            cell_gradients = None
 
     return properties_to_tensormap(
         values, positions_gradients, cell_gradients, property_name=energy
