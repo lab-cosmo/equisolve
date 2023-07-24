@@ -45,10 +45,13 @@ def ase_to_tensormap(
     if forces is not None:
         positions_gradients = [-f.arrays[forces] for f in frames]
     else:
-        try:
-            positions_gradients = [-f.get_forces() for f in frames]
-        except ase.ase.calculators.calculator.PropertyNotImplementedError:
-            positions_gradients = None
+        if (frames[0].get_calculator() is not None) and ("forces" in frames[0].get_calculator().implemented_properties):
+            positions_gradients = [-f.get_forces() if (f.get_calculator() is not None) and ("forces" in f.get_calculator().implemented_properties)
+                                                   else raise AttributeError(f"First frame has calculator with forces, so assumed all frames have forces but frame {i} does not have forces. Please add or remove forces as property everywhere.")
+                                      for i, f in enumerate(frames)]
+        else:
+               positions_gradients = None
+          
 
     if stress is not None:
         cell_gradients = [-f.info[stress] for f in frames]
