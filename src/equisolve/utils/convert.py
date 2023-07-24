@@ -18,7 +18,8 @@ from equistore import Labels, TensorBlock, TensorMap
 def ase_to_tensormap(
     frames: List[ase.Atoms], energy: str = None, forces: str = None, stress: str = None
 ) -> TensorMap:
-    """Store informations from :class:`ase.Atoms` in a :class:`equistore.TensorMap`.
+    """Store informations from :class:`ase.Atoms`
+    in a :class:`equistore.TensorMap`.
 
     :param frames:
         ase.Atoms or list of ase.Atoms
@@ -35,19 +36,34 @@ def ase_to_tensormap(
     if not isinstance(frames, list):
         frames = [frames]
 
-    values = [f.info[energy] for f in frames]
+    if energy is not None:
+        values = [f.info[energy] for f in frames]
+    else:
+        energy = "energy"
+        values = [f.get_potential_energy() for f in frames]
 
     if forces is not None:
         positions_gradients = [-f.arrays[forces] for f in frames]
     else:
-        positions_gradients = None
+        if (frames[0].get_calculator() is not None) and ("forces" in frames[0].get_calculator().implemented_properties):
+            positions_gradients = [-f.get_forces() if (f.get_calculator() is not None) and ("forces" in f.get_calculator().implemented_properties)
+                                                   else raise AttributeError(f"First frame has calculator with forces, so assumed all frames have forces but frame {i} does not have forces. Please add or remove forces as property everywhere.")
+                                      for i, f in enumerate(frames)]
+        else:
+               positions_gradients = None
+          
 
     if stress is not None:
-        cell_gradients = [-f.arrays[stress] for f in frames]
+        cell_gradients = [-f.info[stress] for f in frames]
     else:
-        cell_gradients = None
+        try:
+            cell_gradients = [-f.get_stress(voigt=False) for f in frames]
+        except ase.ase.calculators.calculator.PropertyNotImplementedError:
+            cell_gradients = None
 
-    return properties_to_tensormap(values, positions_gradients, cell_gradients)
+    return properties_to_tensormap(
+        values, positions_gradients, cell_gradients, property_name=energy
+    )
 
 
 def properties_to_tensormap(
@@ -55,6 +71,7 @@ def properties_to_tensormap(
     positions_gradients: List[np.ndarray] = None,
     cell_gradients: List[np.ndarray] = None,
     is_structure_property: bool = True,
+    property_name: str = "property",
 ) -> TensorMap:
     """Create a :class:`equistore.TensorMap` from array like properties.
 
@@ -94,7 +111,7 @@ def properties_to_tensormap(
         values=np.asarray(values).reshape(-1, 1),
         samples=Labels(["structure"], np.arange(n_structures).reshape(-1, 1)),
         components=[],
-        properties=Labels(["property"], np.array([(0,)])),
+        properties=Labels([property_name], np.array([(0,)])),
     )
 
     if positions_gradients is not None:
