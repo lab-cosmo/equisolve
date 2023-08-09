@@ -19,11 +19,11 @@ class FPS(GreedySelector):
     """
     Transformer that performs Greedy Feature Selection using Farthest Point
     Sampling.
-    
+
     If `n_to_select` is an `int`, all blocks will have this many features
     selected. In this case, `n_to_select` must be <= than the fewest number of
-    features in any block. 
-    
+    features in any block.
+
     If `n_to_select` is a dict, it must have keys that are tuples corresponding
     to the key values of each block. In this case, the values of the
     `n_to_select` dict can be int that specify different number of features to
@@ -65,8 +65,8 @@ class CUR(GreedySelector):
 
     If `n_to_select` is an `int`, all blocks will have this many features
     selected. In this case, `n_to_select` must be <= than the fewest number of
-    features in any block. 
-    
+    features in any block.
+
     If `n_to_select` is a dict, it must have keys that are tuples corresponding
     to the key values of each block. In this case, the values of the
     `n_to_select` dict can be int that specify different number of features to
