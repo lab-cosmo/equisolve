@@ -62,11 +62,16 @@ class GreedySelector:
 
     @property
     def get_select_distance(self) -> TensorMap:
-        """TensorMap containing the Haussdorf distances."""
+        """
+        TensorMap containing the Hausdorff distances. For each block, the
+        metadata of the relevant axis (i.e. samples or properties, depending on
+        whether sample or feature selection is being performed) is sorted
+        according to the Hausdorff distance, in descending order.
+        """
         if self._support is None:
             raise ValueError("No selections. Call fit method first.")
         if self._select_distance is None:
-            raise ValueError("No Haussdorf distances. Call fit method first.")
+            raise ValueError("No Hausdorff distances. Call fit method first.")
 
         return self._select_distance
 
@@ -92,7 +97,7 @@ class GreedySelector:
             )
 
         support_blocks = []
-        haussdorf_blocks = []
+        hausdorff_blocks = []
         for key, block in X.items():
             # Parse the n_to_select argument
             max_n = len(block.properties) if self._selection_type == "feature" else len(block.samples)
@@ -169,9 +174,9 @@ class GreedySelector:
                 )
             )
 
-            # Build the Haussdorf TensorMap. In this case we want the mask to be a
+            # Build the Hausdorff TensorMap. In this case we want the mask to be a
             # list of int such that the smaples/properties are reordered
-            # according to the Haussdorf distance.
+            # according to the Hausdorff distance.
             haus_mask = selector.get_support(indices=True, ordered=True)
             if self._selection_type == "feature":
                 haus_samples = Labels.single()
@@ -184,8 +189,10 @@ class GreedySelector:
                 )
                 haus_properties = Labels.single()
             
+            # TODO: change haussdorf_at_select_ -> hausdorff_at_select_ when
+            # skmatter PR #207 is merged.
             haus_vals = selector.haussdorf_at_select_[haus_mask].reshape(len(haus_samples), len(haus_properties))
-            haussdorf_blocks.append(
+            hausdorff_blocks.append(
                 TensorBlock(
                     values=haus_vals,
                     samples=haus_samples,
@@ -195,7 +202,7 @@ class GreedySelector:
             )
 
         self._support = TensorMap(X.keys, support_blocks)
-        self._select_distance = TensorMap(X.keys, haussdorf_blocks)
+        self._select_distance = TensorMap(X.keys, hausdorff_blocks)
 
         return self
 

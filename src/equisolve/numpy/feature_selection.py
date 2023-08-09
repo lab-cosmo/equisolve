@@ -30,7 +30,7 @@ class FPS(GreedySelector):
     select for each block.
 
     If `n_to_select` is -1, all features for every block will be selected. This
-    is useful, for instance, for plotting Haussdorf distances, which can be
+    is useful, for instance, for plotting Hausdorff distances, which can be
     accessed through the selector.haussdorf_at_select property after calling the
     fit() method.
 
@@ -73,7 +73,7 @@ class CUR(GreedySelector):
     select for each block.
 
     If `n_to_select` is -1, all features for every block will be selected. This
-    is useful, for instance, for plotting Haussdorf distances, which can be
+    is useful, for instance, for plotting Hausdorff distances, which can be
     accessed through the selector.haussdorf_at_select property after calling the
     fit() method.
 
