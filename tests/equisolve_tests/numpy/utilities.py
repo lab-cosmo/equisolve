@@ -1,6 +1,6 @@
-import equistore
+import metatensor
 import numpy as np
-from equistore import Labels, TensorBlock, TensorMap
+from metatensor import Labels, TensorBlock, TensorMap
 
 
 def random_single_block_no_components_tensor_map():
@@ -59,7 +59,7 @@ def random_single_block_no_components_tensor_map():
 
 
 def tensor_to_tensormap(a: np.ndarray, key_name: str = "keys") -> TensorMap:
-    """Create a :class:`equistore.TensorMap` from 3d :class`numpy.ndarray`.
+    """Create a :class:`metatensor.TensorMap` from 3d :class`numpy.ndarray`.
 
     First dimension of a defines the number of blocks.
     The values of each block are taken from the second and the third dimension.
@@ -86,7 +86,7 @@ def tensor_to_tensormap(a: np.ndarray, key_name: str = "keys") -> TensorMap:
 
     blocks = []
     for values in a:
-        blocks.append(equistore.block_from_array(values))
+        blocks.append(metatensor.block_from_array(values))
 
     keys = Labels.range(key_name, end=len(blocks))
     return TensorMap(keys, blocks)

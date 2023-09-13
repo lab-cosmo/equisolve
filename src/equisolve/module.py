@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from typing import TypeVar
 
-from equistore import TensorMap
+from metatensor import TensorMap
 
 
 class NumpyModule(metaclass=ABCMeta):

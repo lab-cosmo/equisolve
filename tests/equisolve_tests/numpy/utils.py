@@ -7,7 +7,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import numpy as np
 import pytest
-from equistore import Labels, TensorBlock
+from metatensor import Labels, TensorBlock
 from numpy.testing import assert_equal
 
 from equisolve.numpy.utils import array_from_block

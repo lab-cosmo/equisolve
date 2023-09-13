@@ -8,10 +8,10 @@
 import re
 from typing import List
 
-import equistore
+import metatensor
 import numpy as np
 import pytest
-from equistore import Labels, TensorBlock, TensorMap
+from metatensor import Labels, TensorBlock, TensorMap
 from numpy.testing import assert_equal
 
 from equisolve.utils import split_data
@@ -234,12 +234,12 @@ def check_no_intersection_indices_same_group(
     for group in split_tensors:
         for i in range(len(group)):
             for j in range(i + 1, len(split_tensors[0])):
-                uniq_a = equistore.unique_metadata(
+                uniq_a = metatensor.unique_metadata(
                     split_tensors[0][i],
                     axis,
                     names,
                 )
-                uniq_b = equistore.unique_metadata(
+                uniq_b = metatensor.unique_metadata(
                     split_tensors[0][j],
                     axis,
                     names,
@@ -262,8 +262,8 @@ def check_equivalent_indices_different_groups(
     for i in range(1, len(split_tensors)):
         check_list = split_tensors[i]
         for j in range(len(ref_list)):
-            ref_uniq = equistore.unique_metadata(ref_list[j], axis, names)
-            check_uniq = equistore.unique_metadata(check_list[j], axis, names)
+            ref_uniq = metatensor.unique_metadata(ref_list[j], axis, names)
+            check_uniq = metatensor.unique_metadata(check_list[j], axis, names)
             assert np.all(ref_uniq == check_uniq)
 
 
@@ -301,7 +301,7 @@ def check_values(
     Checks that the block values have been sliced correctly.
     """
     for i, indices in enumerate(target_indices):
-        ref_tensor = equistore.slice(original_tensor, axis="samples", labels=indices)
+        ref_tensor = metatensor.slice(original_tensor, axis="samples", labels=indices)
         for key, ref_block in ref_tensor.items():
             check_block = split_tensors[0][i][key]
             if not np.all(ref_block.values == check_block.values):
@@ -447,7 +447,7 @@ class TestSplitData:
         assert_equal(target_grouped_labels, actual_grouped_labels_1)
         assert_equal(actual_grouped_labels_1, actual_grouped_labels_2)
         for i, j in zip(split_tensors_1[0], split_tensors_2[0]):
-            assert equistore.equal(i, j)
+            assert metatensor.equal(i, j)
 
     def test_split_data_abs_rel_same_result_properties(self, test_tensor_map, request):
         """
@@ -490,7 +490,7 @@ class TestSplitData:
         assert_equal(target_grouped_labels, actual_grouped_labels_1)
         assert_equal(actual_grouped_labels_1, actual_grouped_labels_2)
         for i, j in zip(split_tensors_1[0], split_tensors_2[0]):
-            assert equistore.equal(i, j)
+            assert metatensor.equal(i, j)
 
     def test_split_data_abs_rel_same_result_less_than_n(self, test_tensor_map, request):
         """
@@ -536,7 +536,7 @@ class TestSplitData:
         assert_equal(target_grouped_labels, actual_grouped_labels_1)
         assert_equal(actual_grouped_labels_1, actual_grouped_labels_2)
         for i, j in zip(split_tensors_1[0], split_tensors_2[0]):
-            assert equistore.equal(i, j)
+            assert metatensor.equal(i, j)
 
     def test_split_data_unequal_groups(self, test_tensor_map, request):
         """
@@ -582,7 +582,7 @@ class TestSplitData:
         assert_equal(target_grouped_labels, actual_grouped_labels_1)
         assert_equal(actual_grouped_labels_1, actual_grouped_labels_2)
         for i, j in zip(split_tensors_1[0], split_tensors_2[0]):
-            assert equistore.equal(i, j)
+            assert metatensor.equal(i, j)
 
 
 class TestSplitDataErrors:
@@ -592,7 +592,7 @@ class TestSplitDataErrors:
         """
         # Not passing a TensorMap
         tensors = 5
-        msg = f"`tensors` must be a list of equistore `TensorMap`, got {type(tensors)}"
+        msg = f"`tensors` must be a list of metatensor `TensorMap`, got {type(tensors)}"
         with pytest.raises(TypeError, match=re.escape(msg)):
             split_data(
                 tensors=tensors,
@@ -602,7 +602,7 @@ class TestSplitDataErrors:
             )
         # Not passing a list of TensorMap
         tensors = [test_tensor_map_a, 3]
-        msg = f"`tensors` must be a list of equistore `TensorMap`, got {type(tensors)}"
+        msg = f"`tensors` must be a list of metatensor `TensorMap`, got {type(tensors)}"
         with pytest.raises(TypeError, match=re.escape(msg)):
             split_data(
                 tensors=tensors,
@@ -768,7 +768,7 @@ class TestSplitDataErrors:
         # Passing group_sizes as a list of int whose sum is greater than the
         # number of unique properties
         group_sizes = [3, 3]
-        unique_idxs = equistore.unique_metadata(
+        unique_idxs = metatensor.unique_metadata(
             test_tensor_map_a, "properties", "properties"
         )
         msg = (
@@ -787,7 +787,7 @@ class TestSplitDataErrors:
         # Passing group_sizes as a list of a single int which is greater than
         # the number of unique properties
         group_sizes = [1000]
-        unique_idxs = equistore.unique_metadata(
+        unique_idxs = metatensor.unique_metadata(
             test_tensor_map_a, "properties", "properties"
         )
         msg = (

@@ -1,8 +1,8 @@
 from typing import Optional
 
-import equistore
+import metatensor
 import numpy as np
-from equistore import Labels, TensorBlock, TensorMap
+from metatensor import Labels, TensorBlock, TensorMap
 
 from ... import HAS_TORCH
 from ...module import NumpyModule, _Transformer
@@ -46,7 +46,7 @@ class _StandardScaler(_Transformer):
         self.atol = atol
 
     def _validate_data(self, X: TensorMap, y: TensorMap = None):
-        """Validates :class:`equistore.TensorBlock`'s for the usage in models.
+        """Validates :class:`metatensor.TensorBlock`'s for the usage in models.
 
         :param X: training data to check
         :param y: target data to check
@@ -55,7 +55,7 @@ class _StandardScaler(_Transformer):
             raise ValueError("X contains components")
 
         if y is not None:
-            if not equistore.equal_metadata(X, y, check=["samples"]):
+            if not metatensor.equal_metadata(X, y, check=["samples"]):
                 raise ValueError(
                     "Metadata (samples) of X and sample_weight does not agree!"
                 )
@@ -89,7 +89,7 @@ class _StandardScaler(_Transformer):
         mean_blocks = []
         scale_blocks = []
 
-        # replace with equistore oprations see issue #18
+        # replace with metatensor oprations see issue #18
         for key, X_block in X.items():
             # if values not in parameter_keys, we create empty tensor block to
             # attach gradients

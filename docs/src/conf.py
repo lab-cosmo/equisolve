@@ -188,7 +188,7 @@ latex_elements = {
 intersphinx_mapping = {
     "ase": ("https://wiki.fysik.dtu.dk/ase/", None),
     "rascaline": ("https://luthaf.fr/rascaline/latest/", None),
-    "equistore": ("https://lab-cosmo.github.io/equistore/latest/", None),
+    "metatensor": ("https://lab-cosmo.github.io/metatensor/latest/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "python": ("https://docs.python.org/3", None),
     "skmatter": ("https://scikit-matter.readthedocs.io/en/latest/", None),

@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "equisolve"
-description = "A package tasked with taking equistore objects and computing machine learning models using them."
+description = "A package tasked with taking metatensor objects and computing machine learning models using them."
 dynamic = ["version"]
 authors = [{name = "the equisolve development team"}]
 license = {text = "BSD-3-Clause"}
@@ -43,7 +43,7 @@ keywords = [
 requires-python = ">=3.7"
 
 dependencies = [
-    "equistore @ https://github.com/lab-cosmo/equistore/archive/c022fde.zip",
+    "metatensor @ https://github.com/lab-cosmo/metatensor/archive/3c5fee4.zip",
     "numpy",
     "scipy",
     "skmatter"
