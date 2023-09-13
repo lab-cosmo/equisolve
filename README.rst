@@ -3,7 +3,7 @@ equisolve
 
 |test| |docs|
 
-A package tasked with taking equistore objects and computing machine learning
+A package tasked with taking metatensor objects and computing machine learning
 models using them.
 
 .. warning::

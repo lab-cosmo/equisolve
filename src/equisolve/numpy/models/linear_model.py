@@ -8,10 +8,10 @@
 
 from typing import Optional, Union
 
-import equistore
+import metatensor
 import numpy as np
 import scipy.linalg
-from equistore import Labels, TensorBlock, TensorMap
+from metatensor import Labels, TensorBlock, TensorMap
 
 from ... import HAS_TORCH
 from ...module import NumpyModule, _Estimator
@@ -20,7 +20,7 @@ from ..utils import array_from_block, dict_to_tensor_map, tensor_map_to_dict
 
 
 class _Ridge(_Estimator):
-    r"""Linear least squares with l2 regularization for :class:`equistore.Tensormap`'s.
+    r"""Linear least squares with l2 regularization for :class:`metatensor.Tensormap`'s.
 
     Weights :math:`w` are calculated according to
 
@@ -40,14 +40,14 @@ class _Ridge(_Estimator):
         self._weights = None
 
     def _validate_data(self, X: TensorMap, y: Optional[TensorMap] = None) -> None:
-        """Validates :class:`equistore.TensorBlock`'s for the usage in models.
+        """Validates :class:`metatensor.TensorBlock`'s for the usage in models.
 
         :param X:
             training data to check
         :param y:
             target data to check
         """
-        if y is not None and not equistore.equal_metadata(
+        if y is not None and not metatensor.equal_metadata(
             X, y, check=["samples", "components"]
         ):
             raise ValueError(
@@ -67,12 +67,12 @@ class _Ridge(_Estimator):
         :param sample_weight:
             sample weights
         """
-        if not equistore.equal_metadata(X, alpha, check=["components", "properties"]):
+        if not metatensor.equal_metadata(X, alpha, check=["components", "properties"]):
             raise ValueError(
                 "Metadata (components, properties) of X and alpha does not agree!"
             )
 
-        if sample_weight is not None and not equistore.equal_metadata(
+        if sample_weight is not None and not metatensor.equal_metadata(
             X,
             sample_weight,
             check=[
@@ -231,7 +231,7 @@ class _Ridge(_Estimator):
 
         Ridge takes all available values and gradients in the provided TensorMap for the
         fit. Gradients can be exlcuded from the fit if removed from the TensorMap.
-        See :py:func:`equistore.remove_gradients` for details.
+        See :py:func:`metatensor.remove_gradients` for details.
 
         :param X:
             training data
@@ -269,22 +269,24 @@ class _Ridge(_Estimator):
         self._solver = solver
 
         if type(alpha) is float:
-            alpha_tensor = equistore.ones_like(X)
+            alpha_tensor = metatensor.ones_like(X)
 
             samples = Labels(
-                names=X.sample_names,
-                values=np.zeros([1, len(X.sample_names)], dtype=int),
+                names=X.samples_names,
+                values=np.zeros([1, len(X.samples_names)], dtype=int),
             )
 
-            alpha_tensor = equistore.slice(alpha_tensor, axis="samples", labels=samples)
-            alpha = equistore.multiply(alpha_tensor, alpha)
+            alpha_tensor = metatensor.slice(
+                alpha_tensor, axis="samples", labels=samples
+            )
+            alpha = metatensor.multiply(alpha_tensor, alpha)
         elif type(alpha) is not TensorMap:
             raise ValueError("alpha must either be a float or a TensorMap")
 
         if sample_weight is None:
-            sample_weight = equistore.ones_like(y)
+            sample_weight = metatensor.ones_like(y)
         elif type(sample_weight) is float:
-            sample_weight = equistore.multiply(equistore.ones_like(y), sample_weight)
+            sample_weight = metatensor.multiply(metatensor.ones_like(y), sample_weight)
         elif type(sample_weight) is not TensorMap:
             raise ValueError("sample_weight must either be a float or a TensorMap.")
 
@@ -292,8 +294,8 @@ class _Ridge(_Estimator):
         self._validate_params(X, alpha, sample_weight)
 
         # Remove all gradients here. This is a workaround until we can exclude gradients
-        # for metadata check (see equistore issue #285 for details)
-        alpha = equistore.remove_gradients(alpha)
+        # for metadata check (see metatensor issue #285 for details)
+        alpha = metatensor.remove_gradients(alpha)
 
         weights_blocks = []
         for key, X_block in X.items():
@@ -328,7 +330,7 @@ class _Ridge(_Estimator):
         :returns:
             predicted values
         """
-        return equistore.dot(X, self.weights)
+        return metatensor.dot(X, self.weights)
 
     def forward(self, X: TensorMap) -> TensorMap:
         return self.predict(X)

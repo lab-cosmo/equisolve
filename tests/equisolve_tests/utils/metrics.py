@@ -5,9 +5,9 @@
 #
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
-import equistore
+import metatensor
 import numpy as np
-from equistore import Labels, TensorBlock, TensorMap
+from metatensor import Labels, TensorBlock, TensorMap
 from numpy.testing import assert_allclose, assert_equal
 
 from equisolve.utils import rmse
@@ -21,11 +21,11 @@ class Testrmse:
 
         y_true = TensorMap(
             Labels.range("key", end=3),
-            [equistore.block_from_array(y) for y in y_true_data],
+            [metatensor.block_from_array(y) for y in y_true_data],
         )
         y_pred = TensorMap(
             Labels.range("key", end=3),
-            [equistore.block_from_array(y) for y in y_pred_data],
+            [metatensor.block_from_array(y) for y in y_pred_data],
         )
 
         assert_allclose(
@@ -46,7 +46,7 @@ class Testrmse:
 
         # Create training data
         X_values = X_arr[:num_targets]
-        X_block = equistore.block_from_array(X_values)
+        X_block = metatensor.block_from_array(X_values)
 
         X_gradient_values = X_arr[num_targets:].reshape(num_targets, 3, num_properties)
 

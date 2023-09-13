@@ -11,9 +11,9 @@ Module for splitting lists of :py:class:`TensorMap` objects into multiple
 """
 from typing import List, Optional, Tuple, Union
 
-import equistore
+import metatensor
 import numpy as np
-from equistore import Labels, TensorMap
+from metatensor import Labels, TensorMap
 
 
 def split_data(
@@ -142,11 +142,11 @@ def split_data(
 
     .. code-block:: python
 
-        import equistore
+        import metatensor
         from equisolve.utils import split_data
 
         # Find the unique structure indices in the input tensor
-        unique_structure_indices = equistore.unique_metadata(
+        unique_structure_indices = metatensor.unique_metadata(
             tensor=input, axis="samples", names=["structure"],
         )
         # They run from 0 -> 10 (inclusive)
@@ -156,7 +156,7 @@ def split_data(
             dtype=[('structure', '<i4')]
         )
         # Verify that the output has the same unique structure indices
-        assert unique_structure_indices == equistore.unique_metadata(
+        assert unique_structure_indices == metatensor.unique_metadata(
             tensor=output, axis="samples", names=["structure"],
         )
         >>> True
@@ -194,7 +194,7 @@ def split_data(
 
     # Get array of unique indices to split by for each tensor in `tensors`
     unique_idxs_list = [
-        equistore.unique_metadata(tensor, axis, names) for tensor in tensors
+        metatensor.unique_metadata(tensor, axis, names) for tensor in tensors
     ]
 
     # Check that the unique indices are equivalent for all input tensors
@@ -235,7 +235,7 @@ def split_data(
     # Split each of the input TensorMaps
     split_tensors = []
     for tensor in tensors:
-        split_tensors.append(equistore.split(tensor, axis, grouped_labels))
+        split_tensors.append(metatensor.split(tensor, axis, grouped_labels))
 
     return split_tensors, grouped_labels
 
@@ -367,13 +367,13 @@ def _check_args(
     # Check tensors passed as a list
     if not isinstance(tensors, list):
         raise TypeError(
-            f"`tensors` must be a list of equistore `TensorMap`, got {type(tensors)}"
+            f"`tensors` must be a list of metatensor `TensorMap`, got {type(tensors)}"
         )
     # Check all tensors in the list are TensorMaps
     for tensor in tensors:
         if not isinstance(tensor, TensorMap):
             raise TypeError(
-                "`tensors` must be a list of equistore `TensorMap`,"
+                "`tensors` must be a list of metatensor `TensorMap`,"
                 f" got {type(tensors)}"
             )
     # Check axis
@@ -389,7 +389,9 @@ def _check_args(
     if not all([isinstance(name, str) for name in names]):
         raise TypeError(f"`names` must be a list of str, got {type(names)}")
     for tensor in tensors:
-        tmp_names = tensor.sample_names if axis == "samples" else tensor.property_names
+        tmp_names = (
+            tensor.samples_names if axis == "samples" else tensor.properties_names
+        )
         for name in names:
             if name not in tmp_names:
                 raise ValueError(

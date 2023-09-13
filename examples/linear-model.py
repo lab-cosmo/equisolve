@@ -5,7 +5,7 @@ Computing a Linear Model
 .. start-body
 
 In this tutorial we calculate a linear model using Ridge regression.
-If you are never worked with equistore objects before please take a look at
+If you are never worked with metatensor objects before please take a look at
 the documentation.
 
 For constructing a linear Model we need the atomic descriptor as training data
@@ -15,7 +15,7 @@ We first import all necessary packages.
 """
 
 import ase.io
-import equistore
+import metatensor
 import numpy as np
 from rascaline import SoapPowerSpectrum
 
@@ -88,11 +88,11 @@ descriptor = descriptor.keys_to_properties(["species_neighbor_1", "species_neigh
 # structure. However, our energies as target data is per structure only.
 # Therefore, we sum the properties of each center atom per structure.
 
-X = equistore.sum_over_samples(descriptor, ["center", "species_center"])
+X = metatensor.sum_over_samples(descriptor, ["center", "species_center"])
 
 # %%
 #
-# The newly defined :class:`equistore.TensorMap` contains a single block
+# The newly defined :class:`metatensor.TensorMap` contains a single block
 
 print(f"X contains {len(X.blocks())} block.")
 
@@ -100,7 +100,7 @@ print(f"X contains {len(X.blocks())} block.")
 #
 # As well as 1800 properties and 20 sample.
 #
-# We acces the data using the :meth:``equistore.TensorMap.block`` method
+# We acces the data using the :meth:``metatensor.TensorMap.block`` method
 
 
 print(f"X contains {len(X[0].properties)} properties.")
@@ -140,8 +140,8 @@ clf = Ridge()
 # without standardizing the features and values the regulerizer strength
 # depends on the system and has to be taken carefully and usually optimized.
 
-alpha = equistore.ones_like(X)
-alpha = equistore.multiply(alpha, 1e-5)
+alpha = metatensor.ones_like(X)
+alpha = metatensor.multiply(alpha, 1e-5)
 
 # %%
 #
@@ -150,14 +150,14 @@ alpha = equistore.multiply(alpha, 1e-5)
 # regulerized in the same way in a linear model.
 #
 # We remove all sample except the 0th one by using the
-# :func:`equistore.slice`.
+# :func:`metatensor.slice`.
 
-samples = equistore.Labels(
+samples = metatensor.Labels(
     names=["structure"],
     values=np.array([(0,)]),
 )
 
-alpha = equistore.slice(alpha, axis="samples", labels=samples)
+alpha = metatensor.slice(alpha, axis="samples", labels=samples)
 
 print(alpha)
 
@@ -172,13 +172,13 @@ print(alpha)
 # Next we create a sample weighting :class:`equistiore.TensorMap` that weights
 # energies five times more then the forces.
 
-sw = equistore.ones_like(y)
-sw = equistore.multiply(sw, 5.0)
+sw = metatensor.ones_like(y)
+sw = metatensor.multiply(sw, 5.0)
 
 # %%
 #
 # The function `equisolve.utils.dictionary_to_tensormap` create a
-# :class:`equistore.TensorMap` with the same shape as our target data ``y`` but
+# :class:`metatensor.TensorMap` with the same shape as our target data ``y`` but
 # with values a defined by ``sw_dict``.
 
 print(sw[0])

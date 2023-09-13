@@ -9,19 +9,19 @@
 import os
 import tempfile
 
-import equistore
+import metatensor
 import numpy as np
-from equistore import TensorBlock, TensorMap
+from metatensor import TensorBlock, TensorMap
 
 
 def array_from_block(block: TensorBlock) -> np.ndarray:
-    """Extract parts of a :class:`equistore.TensorBlock` into a array.
+    """Extract parts of a :class:`metatensor.TensorBlock` into a array.
 
     All components will be stacked along the rows / "sample"-dimension.
     This means that the number of coulums / "property"-dimension is unchanged.
 
     :param block:
-        :class:`equistore.TensorBlock` for the extraction
+        :class:`metatensor.TensorBlock` for the extraction
     :returns M:
         :class:`numpy.ndarray` of shape (n, m) where m is the number of properties in
         the block.
@@ -39,40 +39,40 @@ def array_from_block(block: TensorBlock) -> np.ndarray:
 
 
 def tensor_map_to_dict(tensor_map: TensorMap):
-    """Format an object of a :class:`equistore.TensorBlock` into a dict of array.
+    """Format an object of a :class:`metatensor.TensorBlock` into a dict of array.
 
     TODO rm usage of this function as soon
-         https://github.com/lab-cosmo/equistore/issues/94
+         https://github.com/lab-cosmo/metatensor/issues/94
          is merged
 
     :param tensor_map:
-        :class:`equistore.TensorMap` for the transform
+        :class:`metatensor.TensorMap` for the transform
 
     :returns tensor_map_dict:
-        :class:`dict` of :class:`numpy.ndarray`, consistent with equistore.io.save
+        :class:`dict` of :class:`numpy.ndarray`, consistent with metatensor.io.save
         format
     """
     tmp_filename = tempfile.mktemp() + ".npz"
-    equistore.save(tmp_filename, tensor_map)
+    metatensor.save(tmp_filename, tensor_map)
     tensor_map_dict = {key: value for key, value in np.load(tmp_filename).items()}
     os.remove(tmp_filename)
     return tensor_map_dict
 
 
 def dict_to_tensor_map(tensor_map_dict: dict):
-    """Format a dict of arrays complying with :class:`equistore.TensorBlock`
+    """Format a dict of arrays complying with :class:`metatensor.TensorBlock`
 
     TODO rm usage of this function as soon
-         https://github.com/lab-cosmo/equistore/issues/94
+         https://github.com/lab-cosmo/metatensor/issues/94
          is merged
 
     :param tensor_map:
         :class:`dict` of :class:`numpy.ndarray`,
-        consistent with :func:`equistore.save` format
+        consistent with :func:`metatensor.save` format
 
     :returns tensor_map_dict:
-        :class:`equistore.TensorMap` for the transform
+        :class:`metatensor.TensorMap` for the transform
     """
     tmp_filename = tempfile.mktemp() + ".npz"
     np.savez(tmp_filename, **tensor_map_dict)
-    return equistore.load(tmp_filename)
+    return metatensor.load(tmp_filename)

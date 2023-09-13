@@ -9,9 +9,9 @@
 
 from typing import List
 
-import equistore
+import metatensor
 import numpy as np
-from equistore import TensorMap
+from metatensor import TensorMap
 
 
 def rmse(y_true: TensorMap, y_pred: TensorMap, parameter_key: str) -> List[float]:
@@ -27,7 +27,7 @@ def rmse(y_true: TensorMap, y_pred: TensorMap, parameter_key: str) -> List[float
                    ``y_pred``.
     """
 
-    if not equistore.equal_metadata(y_true, y_pred):
+    if not metatensor.equal_metadata(y_true, y_pred):
         raise ValueError("Metadata of X and sample_weight does not agree!")
 
     loss = []

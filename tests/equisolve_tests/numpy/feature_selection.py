@@ -5,11 +5,11 @@
 #
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
-import equistore
+import metatensor
 import numpy as np
 import pytest
 import skmatter.feature_selection
-from equistore import Labels
+from metatensor import Labels
 from numpy.testing import assert_equal
 
 from equisolve.numpy.feature_selection import CUR, FPS
@@ -63,4 +63,4 @@ class TestSelection:
         selector = selector_class(n_to_select=2)
 
         X_ft = selector.fit(X).transform(X)
-        equistore.equal_raise(selector.fit_transform(X), X_ft)
+        metatensor.equal_raise(selector.fit_transform(X), X_ft)
