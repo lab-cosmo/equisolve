@@ -28,8 +28,14 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - run: pip install tox
 
-    - name: run Python tests
-      run: tox -e tests
+    - name: run Python metatensor-core tests wtih numpy array backend
+      run: tox -e core-numpy-tests
+
+    - name: run Python metatensor-core tests with torch array backend
+      run: tox -e core-torch-tests
+
+    - name: run Python metatensor-torch tests
+      run: tox -e torch-tests
 
     - name: try building Python wheel and sdist
       run: tox -e build
