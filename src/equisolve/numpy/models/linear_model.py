@@ -106,7 +106,7 @@ class _Ridge(_Estimator):
         y: TensorBlock,
         alpha: TensorBlock,
         sample_weight: TensorBlock,
-        cond: float,
+        cond: Optional[float] = None,
     ) -> TensorBlock:
         """A regularized solver using ``np.linalg.lstsq``."""
         self._used_auto_solver = None
@@ -197,10 +197,12 @@ class _Ridge(_Estimator):
             # and b is [y*sqrt(w), 0]
             X_eff = np.vstack([sqrt_sw_arr * X_arr, np.diag(np.sqrt(alpha_arr))])
             y_eff = np.hstack([y_arr * sqrt_sw_arr.flatten(), np.zeros(num_properties)])
+            if cond is None:
+                cond = max(X_arr.shape) * np.finfo(X_arr.dtype.char.lower()).eps
             w = scipy.linalg.lstsq(X_eff, y_eff, cond=cond, overwrite_a=True)[0].ravel()
         else:
             raise ValueError(
-                f"Unknown solver {self._solver} only 'auto', 'cholesky',"
+                f"Unknown solver {self._solver!r} only 'auto', 'cholesky',"
                 " 'cholesky_dual' and 'lstsq' are supported."
             )
 
@@ -225,7 +227,7 @@ class _Ridge(_Estimator):
         alpha: Union[float, TensorMap] = 1.0,
         sample_weight: Union[float, TensorMap] = None,
         solver="auto",
-        cond: float = None,
+        cond: Optional[float] = None,
     ) -> None:
         """Fit a regression model to each block in `X`.
 
@@ -264,7 +266,8 @@ class _Ridge(_Estimator):
         :param cond:
             Cut-off ratio for small singular values during the fit. For the purposes of
             rank determination, singular values are treated as zero if they are smaller
-            than `cond` times the largest singular value in "weights" matrix.
+            than `cond` times the largest singular value in "weights" matrix. Only
+            important when solver "lstsq" is used.
         """
         self._solver = solver
 
