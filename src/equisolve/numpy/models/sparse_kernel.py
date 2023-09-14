@@ -1,18 +1,18 @@
 from typing import Union
-from equistore import TensorMap, Labels, TensorBlock
+
+import metatensor
 import numpy as np
 import scipy
-from equistore.operations import dot, multiply, ones_like, slice
+from metatensor import Labels, TensorBlock, TensorMap
+from metatensor.operations import dot, multiply, ones_like, slice
 
 from ..utils import block_to_array, dict_to_tensor_map, tensor_map_to_dict
-
-import equistore
 
 
 def compute_sparse_kernel(
     tensor: TensorMap, pseudo_points: TensorMap, degree: int
 ) -> TensorMap:
-    equistore.pow(equistore.dot(tensor, pseudo_points), degree)
+    metatensor.pow(metatensor.dot(tensor, pseudo_points), degree)
 
 
 class SparseKernelRidge:
