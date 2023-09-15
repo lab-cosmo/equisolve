@@ -1,7 +1,6 @@
-import functools
-
-import numpy as np
 import pytest
+
+from ..utilities import random_single_block_no_components_tensor_map
 
 
 try:
@@ -15,77 +14,13 @@ if HAS_TORCH:
     from equisolve.nn import Linear
 
 try:
-    from metatensor.torch import Labels, TensorBlock, TensorMap, allclose_raise
+    from metatensor.torch import allclose_raise
 
     HAS_METATENSOR_TORCH = True
 except ImportError:
-    from metatensor import Labels, TensorBlock, TensorMap, allclose_raise
+    from metatensor import allclose_raise
 
     HAS_METATENSOR_TORCH = False
-
-
-def random_single_block_no_components_tensor_map():
-    """
-    Create a dummy tensor map to be used in tests. This is the same one as the
-    tensor map used in `tensor.rs` tests.
-    """
-    if HAS_TORCH:
-        create_random_array = torch.rand
-    else:
-        create_random_array = np.random.rand
-
-    if HAS_METATENSOR_TORCH:
-        create_int32_array = functools.partial(torch.tensor, dtype=torch.int32)
-    else:
-        create_int32_array = functools.partial(np.array, dtype=np.int32)
-
-    block_1 = TensorBlock(
-        values=create_random_array(4, 2),
-        samples=Labels(
-            ["sample", "structure"],
-            create_int32_array([[0, 0], [1, 1], [2, 2], [3, 3]]),
-        ),
-        components=[],
-        properties=Labels(["properties"], create_int32_array([[0], [1]])),
-    )
-    positions_gradient = TensorBlock(
-        values=create_random_array(7, 3, 2),
-        samples=Labels(
-            ["sample", "structure", "center"],
-            create_int32_array(
-                [
-                    [0, 0, 1],
-                    [0, 0, 2],
-                    [1, 1, 0],
-                    [1, 1, 1],
-                    [1, 1, 2],
-                    [2, 2, 0],
-                    [3, 3, 0],
-                ],
-            ),
-        ),
-        components=[Labels(["direction"], create_int32_array([[0], [1], [2]]))],
-        properties=block_1.properties,
-    )
-    block_1.add_gradient("positions", positions_gradient)
-
-    cell_gradient = TensorBlock(
-        values=create_random_array(4, 6, 2),
-        samples=Labels(
-            ["sample", "structure"],
-            create_int32_array([[0, 0], [1, 1], [2, 2], [3, 3]]),
-        ),
-        components=[
-            Labels(
-                ["direction_xx_yy_zz_yz_xz_xy"],
-                create_int32_array([[0], [1], [2], [3], [4], [5]]),
-            )
-        ],
-        properties=block_1.properties,
-    )
-    block_1.add_gradient("cell", cell_gradient)
-
-    return TensorMap(Labels.single(), [block_1])
 
 
 @pytest.mark.skipif(not (HAS_TORCH), reason="requires torch to be run")
@@ -101,7 +36,9 @@ class TestModuleTensorMap:
     @pytest.mark.parametrize(
         "tensor",
         [
-            random_single_block_no_components_tensor_map(),
+            random_single_block_no_components_tensor_map(
+                HAS_TORCH, HAS_METATENSOR_TORCH
+            ),
         ],
     )
     def test_linear_module_init(self, tensor):
@@ -127,7 +64,9 @@ class TestModuleTensorMap:
     @pytest.mark.parametrize(
         "tensor",
         [
-            random_single_block_no_components_tensor_map(),
+            random_single_block_no_components_tensor_map(
+                HAS_TORCH, HAS_METATENSOR_TORCH
+            ),
         ],
     )
     def test_linear_module_from_module(self, tensor):
@@ -154,7 +93,9 @@ class TestModuleTensorMap:
     @pytest.mark.parametrize(
         "tensor",
         [
-            random_single_block_no_components_tensor_map(),
+            random_single_block_no_components_tensor_map(
+                HAS_TORCH, HAS_METATENSOR_TORCH
+            ),
         ],
     )
     @pytest.mark.skipif(
