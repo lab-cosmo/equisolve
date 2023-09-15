@@ -16,3 +16,4 @@ recipes how to stack the functions toegther you might take a look at the
     selection/index.rst
     models
     utils/index
+    neural_network
