@@ -3,8 +3,7 @@ try:
 
     HAS_METATENSOR_TORCH = True
 except ImportError:
-    from metatensor import Labels, TensorBlock, TensorMap
-    from metatensor.core.labels import LabelsEntry
+    from metatensor import Labels, LabelsEntry, TensorBlock, TensorMap
 
     HAS_METATENSOR_TORCH = False
 
