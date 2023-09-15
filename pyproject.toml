@@ -43,7 +43,7 @@ keywords = [
 requires-python = ">=3.7"
 
 dependencies = [
-    "metatensor @ https://github.com/lab-cosmo/metatensor/archive/3c5fee4.zip",
+    "metatensor @ https://github.com/lab-cosmo/metatensor/archive/2248a3c.zip",
     "numpy",
     "scipy",
     "skmatter"

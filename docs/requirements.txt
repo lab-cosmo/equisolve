@@ -7,6 +7,6 @@ furo
 #
 # When we update the metatensor hash here we ALSO have to update the hash
 # in the rascaline branch!
-rascaline @ https://github.com/luthaf/rascaline/archive/fb5332f.zip
+rascaline @ https://github.com/luthaf/rascaline/archive/23448bd.zip
 sphinx >=4.4
 sphinx-gallery
