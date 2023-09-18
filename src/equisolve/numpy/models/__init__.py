@@ -13,6 +13,7 @@ on torch will be added in the future.
 
 
 from .linear_model import Ridge
+from .sor_kernel_ridge import SorKernelRidge
 
 
-__all__ = ["Ridge"]
+__all__ = ["Ridge", "SorKernelRidge"]
