@@ -16,6 +16,10 @@ import equisolve
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
+# when importing metatensor-torch, this will change the definition of the classes
+# to include the documentation
+os.environ["METATENSOR_IMPORT_FOR_SPHINX"] = "1"
+
 sys.path.insert(0, os.path.abspath('../../'))
 
 # -- Project information -----------------------------------------------------
