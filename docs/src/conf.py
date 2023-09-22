@@ -192,6 +192,7 @@ intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable/", None),
     "python": ("https://docs.python.org/3", None),
     "skmatter": ("https://scikit-matter.readthedocs.io/en/latest/", None),
+    "torch": ("https://pytorch.org/docs/master/", None),
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
