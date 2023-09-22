@@ -48,6 +48,8 @@ dependencies = [
     "scipy",
     "skmatter"
 ]
+[project.optional-dependencies]
+torch = ["metatensor[torch] @ https://github.com/lab-cosmo/metatensor/archive/2248a3c.zip"]
 
 [project.urls]
 homepage = "https://lab-cosmo.github.io/equisolve/latest/"
