@@ -1,11 +1,10 @@
-try:
+from .. import HAS_METATENSOR_TORCH
+
+
+if HAS_METATENSOR_TORCH:
     from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
-
-    HAS_METATENSOR_TORCH = True
-except ImportError:
+else:
     from metatensor import Labels, LabelsEntry, TensorBlock, TensorMap
-
-    HAS_METATENSOR_TORCH = False
 
 from copy import deepcopy
 from typing import List, Optional
