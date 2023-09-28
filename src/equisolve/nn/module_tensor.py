@@ -242,6 +242,34 @@ class Linear(ModuleTensorMap):
         module = torch.nn.Linear(in_features, out_features, bias, device, dtype)
         return ModuleTensorMap.from_module(in_keys, module, many_to_one, out_tensor)
 
+    @classmethod
+    def from_weights(cls, weights: TensorMap, bias: Optional[TensorMap] = None):
+        """
+        :param weights:
+            The weight tensor map from which we create the linear modules.  The
+            properties of the tensor map describe the input dimension and the samples
+            describe the output dimension.
+
+        :param bias:
+            The weight tensor map from which we create the linear layers.
+        """
+        module_map = ModuleDict()
+        for key, weights_block in weights.items():
+            module_key = ModuleTensorMap.module_key(key)
+            module = torch.nn.Linear(
+                len(weights_block.samples),
+                len(weights_block.properties),
+                bias=False,
+                device=weights_block.values.device,
+                dtype=weights_block.values.dtype,
+            )
+            module.weight = torch.nn.Parameter(weights_block.values.T)
+            if bias is not None:
+                module.bias = torch.nn.Parameter(bias.block(key).values)
+            module_map[module_key] = module
+
+        return ModuleTensorMap(module_map, weights)
+
     def forward(self, tensor: TensorMap) -> TensorMap:
         # added to appear in doc, :inherited-members: is not compatible with torch
         return super().forward(tensor)

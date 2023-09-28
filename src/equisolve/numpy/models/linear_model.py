@@ -15,7 +15,7 @@ from metatensor import Labels, TensorBlock, TensorMap
 
 from ...module import _Estimator
 from ...utils.metrics import rmse
-from ..utils import array_from_block
+from ..utils import array_from_block, core_tensor_map_to_torch, transpose_tensor_map
 
 
 class Ridge(_Estimator):
@@ -350,3 +350,32 @@ class Ridge(_Estimator):
         """
         y_pred = self.predict(X)
         return rmse(y, y_pred, parameter_key)
+
+    def export_torch_module(self, device=None, dtype=None):
+        """
+        Export existing weights to a child class :py:class:`torch.nn.Module` so it can
+        :py:mod:`torch.jit` utils can be applied.
+
+        :param device:
+            :py:class:`torch.device` of values in the resulting module
+
+        :param dtye:
+            :py:class:`torch.dtype` of the values in the resulting module
+
+        :returns linear:
+            a :py:class:`equisolve.nn.Linear`
+        """
+        from ... import HAS_METATENSOR_TORCH
+
+        if not HAS_METATENSOR_TORCH:
+            raise ImportError(
+                "To export your model to TorchScript torch needs to be installed. "
+                "Please install torch, then reimport equisolve or "
+                "use equisolve.refresh_global_flags()."
+            )
+        from ...nn import Linear
+
+        torch_weights = core_tensor_map_to_torch(
+            transpose_tensor_map(self.weights), device, dtype
+        )
+        return Linear.from_weights(torch_weights)
