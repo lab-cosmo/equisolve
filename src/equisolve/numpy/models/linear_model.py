@@ -16,7 +16,7 @@ from metatensor import Labels, TensorBlock, TensorMap
 from ... import HAS_TORCH
 from ...module import NumpyModule, _Estimator
 from ...utils.metrics import rmse
-from ..utils import array_from_block, dict_to_tensor_map, tensor_map_to_dict
+from ..utils import array_from_block
 
 
 class _Ridge(_Estimator):
@@ -307,8 +307,7 @@ class _Ridge(_Estimator):
 
             weights_blocks.append(weight_block)
 
-        # convert weights to a dictionary allowing pickle dump of an instance
-        self._weights = tensor_map_to_dict(TensorMap(X.keys, weights_blocks))
+        self._weights = TensorMap(X.keys, weights_blocks)
 
         return self
 
@@ -319,7 +318,7 @@ class _Ridge(_Estimator):
         if self._weights is None:
             raise ValueError("No weights. Call fit method first.")
 
-        return dict_to_tensor_map(self._weights)
+        return self._weights
 
     def predict(self, X: TensorMap) -> TensorMap:
         """
