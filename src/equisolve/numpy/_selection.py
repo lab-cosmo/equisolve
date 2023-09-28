@@ -75,15 +75,14 @@ class GreedySelector:
 
         return self._select_distance
 
-
     def fit(self, X: TensorMap, warm_start: bool = False) -> None:
         """Learn the features to select.
 
         :param X:
             Training vectors.
         :param warm_start:
-            Whether the fit should continue after having already run, after increasing
-            `n_to_select`. Assumes it is called with the same X.
+            Whether the fit should continue after having already run, after
+            increasing `n_to_select`. Assumes it is called with the same X.
         """
         # CHeck that we have only 0 or 1 comoponent axes
         if len(X.components_names) == 0:
@@ -92,21 +91,26 @@ class GreedySelector:
             has_components = True
         else:
             assert len(X.components_names) > 1
-            raise ValueError(
-                "Can only handle TensorMaps with a single component axis."
-            )
+            raise ValueError("Can only handle TensorMaps with a single component axis.")
 
         support_blocks = []
-        hausdorff_blocks = []
+        if self._selector_class == skmatter._selection._FPS:
+            hausdorff_blocks = []
         for key, block in X.items():
             # Parse the n_to_select argument
-            max_n = len(block.properties) if self._selection_type == "feature" else len(block.samples)
+            max_n = (
+                len(block.properties)
+                if self._selection_type == "feature"
+                else len(block.samples)
+            )
             if isinstance(self._n_to_select, int):
-                if self._n_to_select == -1:  # set to the number of samples/features for this block
+                if (
+                    self._n_to_select == -1
+                ):  # set to the number of samples/features for this block
                     tmp_n_to_select = max_n
                 else:
                     tmp_n_to_select = self._n_to_select
-                    
+
             elif isinstance(self._n_to_select, dict):
                 tmp_n_to_select = self._n_to_select[tuple(key.values)]
             else:
@@ -117,10 +121,9 @@ class GreedySelector:
                     f"n_to_select ({tmp_n_to_select}) must > 0 and <= the number of "
                     f"{self._selection_type} for the given block ({max_n})."
                 )
-                
+
             selector = self.selector_class(
-                n_to_select=tmp_n_to_select,
-                **self.selector_arguments
+                n_to_select=tmp_n_to_select, **self.selector_arguments
             )
 
             # If the block has components, reshape to a 2D array such that the
@@ -131,21 +134,15 @@ class GreedySelector:
                 if self._selection_type == "feature":
                     # Move components into samples
                     block_vals = block_vals.reshape(
-                        (
-                            block_vals.shape[0] * n_components, 
-                            block_vals.shape[2]
-                        )
+                        (block_vals.shape[0] * n_components, block_vals.shape[2])
                     )
                 else:
                     assert self._selection_type == "sample"
                     # Move components into features
                     block_vals = block.values.reshape(
-                        (
-                            block_vals.shape[0], 
-                            block_vals.shape[2] * n_components
-                        )
+                        (block_vals.shape[0], block_vals.shape[2] * n_components)
                     )
-                
+
             # Fit on the block values
             selector.fit(block_vals, warm_start=warm_start)
 
@@ -156,7 +153,8 @@ class GreedySelector:
             if self._selection_type == "feature":
                 supp_samples = Labels.single()
                 supp_properties = Labels(
-                    names=block.properties.names, values=block.properties.values[supp_mask]
+                    names=block.properties.names,
+                    values=block.properties.values[supp_mask],
                 )
             elif self._selection_type == "sample":
                 supp_samples = Labels(
@@ -164,7 +162,9 @@ class GreedySelector:
                 )
                 supp_properties = Labels.single()
 
-            supp_vals = np.zeros([len(supp_samples), len(supp_properties)], dtype=np.int32)
+            supp_vals = np.zeros(
+                [len(supp_samples), len(supp_properties)], dtype=np.int32
+            )
             support_blocks.append(
                 TensorBlock(
                     values=supp_vals,
@@ -174,35 +174,39 @@ class GreedySelector:
                 )
             )
 
-            # Build the Hausdorff TensorMap. In this case we want the mask to be a
-            # list of int such that the smaples/properties are reordered
-            # according to the Hausdorff distance.
-            haus_mask = selector.get_support(indices=True, ordered=True)
-            if self._selection_type == "feature":
-                haus_samples = Labels.single()
-                haus_properties = Labels(
-                    names=block.properties.names, values=block.properties.values[haus_mask]
+            if self._selector_class == skmatter._selection._FPS:
+                # Build the Hausdorff TensorMap. In this case we want the mask to be a
+                # list of int such that the smaples/properties are reordered
+                # according to the Hausdorff distance.
+                haus_mask = selector.get_support(indices=True, ordered=True)
+                if self._selection_type == "feature":
+                    haus_samples = Labels.single()
+                    haus_properties = Labels(
+                        names=block.properties.names,
+                        values=block.properties.values[haus_mask],
+                    )
+                elif self._selection_type == "sample":
+                    haus_samples = Labels(
+                        names=block.samples.names,
+                        values=block.samples.values[haus_mask],
+                    )
+                    haus_properties = Labels.single()
+
+                haus_vals = selector.hausdorff_at_select_[haus_mask].reshape(
+                    len(haus_samples), len(haus_properties)
                 )
-            elif self._selection_type == "sample":
-                haus_samples = Labels(
-                    names=block.samples.names, values=block.samples.values[haus_mask]
+                hausdorff_blocks.append(
+                    TensorBlock(
+                        values=haus_vals,
+                        samples=haus_samples,
+                        components=[],
+                        properties=haus_properties,
+                    )
                 )
-                haus_properties = Labels.single()
-            
-            # TODO: change haussdorf_at_select_ -> hausdorff_at_select_ when
-            # skmatter PR #207 is merged.
-            haus_vals = selector.haussdorf_at_select_[haus_mask].reshape(len(haus_samples), len(haus_properties))
-            hausdorff_blocks.append(
-                TensorBlock(
-                    values=haus_vals,
-                    samples=haus_samples,
-                    components=[],
-                    properties=haus_properties,
-                )
-            )
 
         self._support = TensorMap(X.keys, support_blocks)
-        self._select_distance = TensorMap(X.keys, hausdorff_blocks)
+        if self._selector_class == skmatter._selection._FPS:
+            self._select_distance = TensorMap(X.keys, hausdorff_blocks)
 
         return self
 
