@@ -7,10 +7,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from typing import Type, Union
 
-import equistore
+import metatensor
 import numpy as np
 import skmatter._selection
-from equistore import Labels, TensorBlock, TensorMap
+from metatensor import Labels, TensorBlock, TensorMap
 
 
 class GreedySelector:
@@ -219,11 +219,11 @@ class GreedySelector:
             block_support = self.support.block(key)
 
             if self._selection_type == "feature":
-                new_block = equistore.slice_block(
+                new_block = metatensor.slice_block(
                     block, "properties", block_support.properties
                 )
             elif self._selection_type == "sample":
-                new_block = equistore.slice_block(
+                new_block = metatensor.slice_block(
                     block, "samples", block_support.samples
                 )
             blocks.append(new_block)

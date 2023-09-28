@@ -5,10 +5,10 @@
 #
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
-import equistore
+import metatensor
 import numpy as np
 import pytest
-from equistore import Labels, TensorBlock, TensorMap
+from metatensor import Labels, TensorBlock, TensorMap
 from numpy.testing import assert_allclose, assert_equal
 
 from equisolve.numpy.models import Ridge
@@ -42,8 +42,8 @@ class TestRidge:
         """
         self.rng = np.random.default_rng(0x1225787418FBDFD12)
 
-    def to_equistore(self, X_arr=None, y_arr=None, alpha_arr=None, sw_arr=None):
-        """Convert Ridge parameters into equistore Tensormap's with one block."""
+    def to_metatensor(self, X_arr=None, y_arr=None, alpha_arr=None, sw_arr=None):
+        """Convert Ridge parameters into metatensor Tensormap's with one block."""
 
         returns = ()
 
@@ -74,7 +74,7 @@ class TestRidge:
     def equisolve_solver_from_numpy_arrays(
         self, X_arr, y_arr, alpha_arr, sw_arr=None, solver="auto"
     ):
-        X, y, alpha, sw = self.to_equistore(X_arr, y_arr, alpha_arr, sw_arr)
+        X, y, alpha, sw = self.to_metatensor(X_arr, y_arr, alpha_arr, sw_arr)
         clf = Ridge()
         clf.fit(X=X, y=y, alpha=alpha, sample_weight=sw, solver=solver)
         return clf
@@ -363,7 +363,7 @@ class TestRidge:
         # Generate new data
         X_validation = self.rng.normal(mean, 1, size=(50, num_properties))
         y_validation_exact = X_validation @ w_solver
-        y_validation_pred = ridge_class.predict(self.to_equistore(X_validation))
+        y_validation_pred = ridge_class.predict(self.to_metatensor(X_validation))
 
         # Check that the two approaches yield the same result
         assert_allclose(
@@ -527,7 +527,7 @@ class TestRidge:
 
         # Create training data
         X_values = X_arr[:num_targets]
-        X_block = equistore.block_from_array(X_values)
+        X_block = metatensor.block_from_array(X_values)
 
         X_gradient_values = X_arr[num_targets:].reshape(num_targets, 3, num_properties)
 
@@ -550,7 +550,7 @@ class TestRidge:
         y_arr = X_arr @ w_exact
 
         y_values = y_arr[:num_targets].reshape(-1, 1)
-        y_block = equistore.block_from_array(y_values)
+        y_block = metatensor.block_from_array(y_values)
 
         y_gradient_values = y_arr[num_targets:].reshape(num_targets, 3, 1)
 
@@ -607,7 +607,7 @@ class TestRidge:
         clf = Ridge()
         clf.fit(X=X, y=y)
 
-        assert clf.weights.components_names == [["property"]]
+        assert clf.weights.components_names == ["property"]
         assert clf.weights[0].values.shape == (1, 1, 1)
 
     @pytest.mark.parametrize(
@@ -635,7 +635,7 @@ class TestRidge:
 
     def test_error_properties(self):
         """Test error raise for non matching number of properties in X & alpha"""
-        X, y, alpha = self.to_equistore(
+        X, y, alpha = self.to_metatensor(
             X_arr=np.ones([self.num_targets[0], self.num_properties[0]]),
             y_arr=np.ones(self.num_targets[0]),
             alpha_arr=np.ones(self.num_properties[0] + 1),
@@ -650,7 +650,7 @@ class TestRidge:
     def test_error_samples(self, extra_samples):
         """Test error raise for non matching number of samples in X & y"""
 
-        X, y, alpha, sw = self.to_equistore(
+        X, y, alpha, sw = self.to_metatensor(
             X_arr=np.ones([self.num_targets[0], self.num_properties[0]]),
             y_arr=np.ones(self.num_targets[0] + extra_samples[0]),
             alpha_arr=np.ones(self.num_properties[0]),

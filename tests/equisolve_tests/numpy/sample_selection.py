@@ -5,11 +5,11 @@
 #
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
-import equistore
+import metatensor
 import numpy as np
 import pytest
 import skmatter.sample_selection
-from equistore import Labels
+from metatensor import Labels
 from numpy.testing import assert_equal
 
 from equisolve.numpy.sample_selection import CUR, FPS
@@ -49,14 +49,13 @@ class TestSelection:
         [(FPS, skmatter.sample_selection.FPS), (CUR, skmatter.sample_selection.CUR)],
     )
     def test_transform(self, X, selector_class, skmatter_selector_class):
-        selector = selector_class(n_to_select=2)
+        selector = selector_class(n_to_select=2, random_state=0)
         selector.fit(X)
         X_trans = selector.transform(X)
 
-        skmatter_selector = skmatter_selector_class(n_to_select=2)
+        skmatter_selector = skmatter_selector_class(n_to_select=2, random_state=0)
         skmatter_selector.fit(X[0].values)
-        X_trans_skmatter = skmatter_selector.transform(X[0].values)
-
+        X_trans_skmatter = X[0].values[skmatter_selector.get_support()]
         assert_equal(X_trans[0].values, X_trans_skmatter)
 
     @pytest.mark.parametrize("selector_class", [FPS, CUR])
@@ -64,4 +63,4 @@ class TestSelection:
         selector = selector_class(n_to_select=2)
 
         X_ft = selector.fit(X).transform(X)
-        equistore.equal_raise(selector.fit_transform(X), X_ft)
+        metatensor.equal_raise(selector.fit_transform(X), X_ft)

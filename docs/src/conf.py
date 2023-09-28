@@ -16,6 +16,10 @@ import equisolve
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
+# when importing metatensor-torch, this will change the definition of the classes
+# to include the documentation
+os.environ["METATENSOR_IMPORT_FOR_SPHINX"] = "1"
+
 sys.path.insert(0, os.path.abspath('../../'))
 
 # -- Project information -----------------------------------------------------
@@ -188,10 +192,11 @@ latex_elements = {
 intersphinx_mapping = {
     "ase": ("https://wiki.fysik.dtu.dk/ase/", None),
     "rascaline": ("https://luthaf.fr/rascaline/latest/", None),
-    "equistore": ("https://lab-cosmo.github.io/equistore/latest/", None),
+    "metatensor": ("https://lab-cosmo.github.io/metatensor/latest/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "python": ("https://docs.python.org/3", None),
     "skmatter": ("https://scikit-matter.readthedocs.io/en/latest/", None),
+    "torch": ("https://pytorch.org/docs/master/", None),
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
