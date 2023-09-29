@@ -119,7 +119,9 @@ def random_tensor_map_with_components(use_torch, use_metatensor_torch):
             components=[
                 Labels(names=["component"], values=np.arange(2 * i + 1).reshape(-1, 1)),
             ],
-            properties=Labels(["properties"], create_int32_array([[0], [1], [2], [5], [10]])),
+            properties=Labels(
+                ["properties"], create_int32_array([[0], [1], [2], [5], [10]])
+            ),
         )
         positions_gradient = TensorBlock(
             values=create_random_array(7, 3, 2 * i + 1, 5),

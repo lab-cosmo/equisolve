@@ -72,10 +72,7 @@ class CUR(GreedySelector):
     `n_to_select` dict can be int that specify different number of samples to
     select for each block.
 
-    If `n_to_select` is -1, all samples for every block will be selected. This
-    is useful, for instance, for plotting Hausdorff distances, which can be
-    accessed through the selector.haussdorf_at_select property method after
-    calling the fit() method.
+    If `n_to_select` is -1, all samples for every block will be selected.
 
     Refer to :py:class:`skmatter.sample_selection.CUR` for full documentation.
     """

@@ -111,7 +111,7 @@ class TestSelection:
         selector.fit(X2)
         select_distance = selector.get_select_distance
         for i, key in enumerate(keys):
-            assert len(block.properties) == 2 * i + 1
+            assert len(select_distance[key].properties) == 2 * i + 1
 
     @pytest.mark.parametrize("selector_class", [CUR])
     def test_get_select_distance_raises(self, X2, selector_class):
