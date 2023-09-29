@@ -68,8 +68,8 @@ class GreedySelector:
         whether sample or feature selection is being performed) is sorted
         according to the Hausdorff distance, in descending order.
         """
-        if self._support is None:
-            raise ValueError("No selections. Call fit method first.")
+        if self._selector_class == skmatter._selection._CUR:
+            raise ValueError("Hausdorff distances not available for CUR in skmatter.")
         if self._select_distance is None:
             raise ValueError("No Hausdorff distances. Call fit method first.")
 

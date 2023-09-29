@@ -79,7 +79,7 @@ def random_single_block_no_components_tensor_map(use_torch, use_metatensor_torch
     return TensorMap(Labels.single(), [block_1])
 
 
-def random_single_block_with_components_tensor_map(use_torch, use_metatensor_torch):
+def random_tensor_map_with_components(use_torch, use_metatensor_torch):
     """
     Create a dummy tensor map to be used in tests. This is the same one as the
     tensor map used in `tensor.rs` tests.
@@ -111,7 +111,7 @@ def random_single_block_with_components_tensor_map(use_torch, use_metatensor_tor
     blocks = []
     for i in range(3):
         block = TensorBlock(
-            values=create_random_array(4, 2 * i + 1, 2),
+            values=create_random_array(4, 2 * i + 1, 5),
             samples=Labels(
                 ["sample", "structure"],
                 create_int32_array([[0, 0], [1, 1], [2, 2], [3, 3]]),
@@ -119,10 +119,10 @@ def random_single_block_with_components_tensor_map(use_torch, use_metatensor_tor
             components=[
                 Labels(names=["component"], values=np.arange(2 * i + 1).reshape(-1, 1)),
             ],
-            properties=Labels(["properties"], create_int32_array([[0], [1]])),
+            properties=Labels(["properties"], create_int32_array([[0], [1], [2], [5], [10]])),
         )
         positions_gradient = TensorBlock(
-            values=create_random_array(7, 3, 2 * i + 1, 2),
+            values=create_random_array(7, 3, 2 * i + 1, 5),
             samples=Labels(
                 ["sample", "structure", "center"],
                 create_int32_array(
@@ -146,7 +146,7 @@ def random_single_block_with_components_tensor_map(use_torch, use_metatensor_tor
         block.add_gradient("positions", positions_gradient)
 
         cell_gradient = TensorBlock(
-            values=create_random_array(4, 6, 2 * i + 1, 2),
+            values=create_random_array(4, 6, 2 * i + 1, 5),
             samples=Labels(
                 ["sample", "structure"],
                 create_int32_array([[0, 0], [1, 1], [2, 2], [3, 3]]),
