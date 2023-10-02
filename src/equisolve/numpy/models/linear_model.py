@@ -269,17 +269,55 @@ class _Ridge(_Estimator):
         self._solver = solver
 
         if type(alpha) is float:
-            alpha_tensor = metatensor.ones_like(X)
-
+            # Create a TensorMap with a single sample and the same components and
+            # properties as X
             samples = Labels(
                 names=X.samples_names,
                 values=np.zeros([1, len(X.samples_names)], dtype=int),
             )
+            new_blocks = []
+            for X_block in X.blocks():
+                shape = (
+                    [1]
+                    + [len(c) for c in X_block.components]
+                    + [len(X_block.properties)]
+                )
 
-            alpha_tensor = metatensor.slice(
-                alpha_tensor, axis="samples", labels=samples
-            )
-            alpha = metatensor.multiply(alpha_tensor, alpha)
+                new_block = TensorBlock(
+                    values=alpha * np.ones(shape),
+                    samples=samples,
+                    components=X_block.components,
+                    properties=X_block.properties,
+                )
+
+                # Add dummy gradients to pass metadata check.
+                # This is a workaround until we can exclude gradients
+                # for metadata check (see metatensor issue #285 for details)
+                for parameter, gradient in X_block.gradients():
+                    gradient_samples = Labels(
+                        names=gradient.samples.names,
+                        values=np.zeros([1, len(gradient.samples.names)], dtype=int),
+                    )
+                    shape = (
+                        [1]
+                        + [len(c) for c in gradient.components]
+                        + [len(gradient.properties)]
+                    )
+
+                    new_block.add_gradient(
+                        parameter=parameter,
+                        gradient=TensorBlock(
+                            values=np.zeros(shape),
+                            samples=gradient_samples,
+                            components=gradient.components,
+                            properties=gradient.properties,
+                        ),
+                    )
+
+                new_blocks.append(new_block)
+
+            alpha = TensorMap(X.keys, new_blocks)
+
         elif type(alpha) is not TensorMap:
             raise ValueError("alpha must either be a float or a TensorMap")
 
@@ -293,8 +331,6 @@ class _Ridge(_Estimator):
         self._validate_data(X, y)
         self._validate_params(X, alpha, sample_weight)
 
-        # Remove all gradients here. This is a workaround until we can exclude gradients
-        # for metadata check (see metatensor issue #285 for details)
         alpha = metatensor.remove_gradients(alpha)
 
         weights_blocks = []
