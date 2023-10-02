@@ -13,13 +13,12 @@ import numpy as np
 import scipy.linalg
 from metatensor import Labels, TensorBlock, TensorMap
 
-from ... import HAS_TORCH
-from ...module import NumpyModule, _Estimator
+from ...module import _Estimator
 from ...utils.metrics import rmse
 from ..utils import array_from_block
 
 
-class _Ridge(_Estimator):
+class Ridge(_Estimator):
     r"""Linear least squares with l2 regularization for :class:`metatensor.Tensormap`'s.
 
     Weights :math:`w` are calculated according to
@@ -351,22 +350,3 @@ class _Ridge(_Estimator):
         """
         y_pred = self.predict(X)
         return rmse(y, y_pred, parameter_key)
-
-
-class NumpyRidge(_Ridge, NumpyModule):
-    def __init__(self) -> None:
-        NumpyModule.__init__(self)
-        _Ridge.__init__(self)
-
-
-if HAS_TORCH:
-    import torch
-
-    class TorchRidge(_Ridge, torch.nn.Module):
-        def __init__(self) -> None:
-            torch.nn.Module.__init__(self)
-            _Ridge.__init__(self)
-
-    Ridge = TorchRidge
-else:
-    Ridge = NumpyRidge
