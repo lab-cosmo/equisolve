@@ -468,16 +468,6 @@ class TestRidge:
         # TODO
         pass
 
-    def test_scalar_alpha(self):
-        """Test ridge regression with scalar alpha."""
-        # TODO
-        pass
-
-    def test_vector_alpha(self):
-        """Test ridge regression with a different alpha per property."""
-        # TODO
-        pass
-
     def test_sample_weights(self):
         """Test ridge regression with a different value per target property."""
         # TODO
@@ -492,6 +482,13 @@ class TestRidge:
         X = tensor_to_tensormap(X_arr)
         y = tensor_to_tensormap(y_arr)
         alpha = tensor_to_tensormap(alpha_arr)
+
+        # Slice TensorMaps to do not start at sample 0.
+        # Testing probable hardcoded sample
+        samples = Labels(names=X.samples_names, values=X[0].samples.values[1:])
+        kwargs = {"axis": "samples", "labels": samples}
+        X = metatensor.slice(X, **kwargs)
+        y = metatensor.slice(y, **kwargs)
 
         clf = Ridge()
 
