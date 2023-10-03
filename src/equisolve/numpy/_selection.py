@@ -84,7 +84,7 @@ class GreedySelector:
             Whether the fit should continue after having already run, after
             increasing `n_to_select`. Assumes it is called with the same X.
         """
-        # CHeck that we have only 0 or 1 comoponent axes
+        # Check that we have only 0 or 1 comoponent axes
         if len(X.components_names) == 0:
             has_components = False
         elif len(X.components_names) == 1:
