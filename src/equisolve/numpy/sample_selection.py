@@ -17,7 +17,22 @@ from ._selection import GreedySelector
 
 class FPS(GreedySelector):
     """
-    Transformer that performs Greedy Sample Selection using Farthest Point Sampling.
+    Transformer that performs Greedy Sample Selection using Farthest Point
+    Sampling.
+
+    If `n_to_select` is an `int`, all blocks will have this many samples
+    selected. In this case, `n_to_select` must be <= than the fewest number of
+    samples in any block.
+
+    If `n_to_select` is a dict, it must have keys that are tuples corresponding
+    to the key values of each block. In this case, the values of the
+    `n_to_select` dict can be int that specify different number of samples to
+    select for each block.
+
+    If `n_to_select` is -1, all samples for every block will be selected. This
+    is useful, for instance, for plotting Hausdorff distances, which can be
+    accessed through the selector.haussdorf_at_select property method after
+    calling the fit() method.
 
     Refer to :py:class:`skmatter.sample_selection.FPS` for full documentation.
     """
@@ -47,6 +62,17 @@ class FPS(GreedySelector):
 
 class CUR(GreedySelector):
     """Transformer that performs Greedy Sample Selection using CUR.
+
+    If `n_to_select` is an `int`, all blocks will have this many samples
+    selected. In this case, `n_to_select` must be <= than the fewest number of
+    samples in any block.
+
+    If `n_to_select` is a dict, it must have keys that are tuples corresponding
+    to the key values of each block. In this case, the values of the
+    `n_to_select` dict can be int that specify different number of samples to
+    select for each block.
+
+    If `n_to_select` is -1, all samples for every block will be selected.
 
     Refer to :py:class:`skmatter.sample_selection.CUR` for full documentation.
     """

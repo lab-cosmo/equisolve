@@ -4,11 +4,20 @@ import metatensor
 import numpy as np
 from metatensor import Labels, TensorMap
 
-from ..utilities import random_single_block_no_components_tensor_map
+from ..utilities import (
+    random_single_block_no_components_tensor_map,
+    random_tensor_map_with_components,
+)
 
 
 random_single_block_no_components_tensor_map = functools.partial(
     random_single_block_no_components_tensor_map,
+    use_torch=False,
+    use_metatensor_torch=False,
+)
+
+random_tensor_map_with_components = functools.partial(
+    random_tensor_map_with_components,
     use_torch=False,
     use_metatensor_torch=False,
 )

@@ -5,7 +5,7 @@
 #
 # Released under the BSD 3-Clause "New" or "Revised" License
 # SPDX-License-Identifier: BSD-3-Clause
-from typing import Type
+from typing import Type, Union
 
 import metatensor
 import numpy as np
@@ -25,14 +25,17 @@ class GreedySelector:
         self,
         selector_class: Type[skmatter._selection.GreedySelector],
         selection_type: str,
+        n_to_select: Union[int, dict],
         **selector_arguments,
     ) -> None:
         self._selector_class = selector_class
         self._selection_type = selection_type
+        self._n_to_select = n_to_select
         self._selector_arguments = selector_arguments
 
         self._selector_arguments["selection_type"] = self._selection_type
         self._support = None
+        self._select_distance = None
 
     @property
     def selector_class(self) -> Type[skmatter._selection.GreedySelector]:
@@ -57,45 +60,153 @@ class GreedySelector:
 
         return self._support
 
+    @property
+    def get_select_distance(self) -> TensorMap:
+        """
+        TensorMap containing the Hausdorff distances. For each block, the
+        metadata of the relevant axis (i.e. samples or properties, depending on
+        whether sample or feature selection is being performed) is sorted
+        according to the Hausdorff distance, in descending order.
+        """
+        if self._selector_class == skmatter._selection._CUR:
+            raise ValueError("Hausdorff distances not available for CUR in skmatter.")
+        if self._select_distance is None:
+            raise ValueError("No Hausdorff distances. Call fit method first.")
+
+        return self._select_distance
+
     def fit(self, X: TensorMap, warm_start: bool = False) -> None:
         """Learn the features to select.
 
         :param X:
             Training vectors.
         :param warm_start:
-            Whether the fit should continue after having already run, after increasing
-            `n_to_select`. Assumes it is called with the same X.
+            Whether the fit should continue after having already run, after
+            increasing `n_to_select`. Assumes it is called with the same X.
         """
-        if len(X.components_names) != 0:
-            raise ValueError("Only blocks with no components are supported.")
+        # Check that we have only 0 or 1 comoponent axes
+        if len(X.components_names) == 0:
+            has_components = False
+        elif len(X.components_names) == 1:
+            has_components = True
+        else:
+            assert len(X.components_names) > 1
+            raise ValueError("Can only handle TensorMaps with a single component axis.")
 
-        blocks = []
-        for _, block in X.items():
-            selector = self.selector_class(**self.selector_arguments)
-            selector.fit(block.values, warm_start=warm_start)
-            mask = selector.get_support()
+        support_blocks = []
+        if self._selector_class == skmatter._selection._FPS:
+            hausdorff_blocks = []
+        for key, block in X.items():
+            # Parse the n_to_select argument
+            max_n = (
+                len(block.properties)
+                if self._selection_type == "feature"
+                else len(block.samples)
+            )
+            if isinstance(self._n_to_select, int):
+                if (
+                    self._n_to_select == -1
+                ):  # set to the number of samples/features for this block
+                    tmp_n_to_select = max_n
+                else:
+                    tmp_n_to_select = self._n_to_select
 
+            elif isinstance(self._n_to_select, dict):
+                tmp_n_to_select = self._n_to_select[tuple(key.values)]
+            else:
+                raise ValueError("n_to_select must be an int or a dict.")
+
+            if not (0 < tmp_n_to_select <= max_n):
+                raise ValueError(
+                    f"n_to_select ({tmp_n_to_select}) must > 0 and <= the number of "
+                    f"{self._selection_type} for the given block ({max_n})."
+                )
+
+            selector = self.selector_class(
+                n_to_select=tmp_n_to_select, **self.selector_arguments
+            )
+
+            # If the block has components, reshape to a 2D array such that the
+            # components expand along the dimension *not* being selected.
+            block_vals = block.values
+            if has_components:
+                n_components = len(block.components[0])
+                if self._selection_type == "feature":
+                    # Move components into samples
+                    block_vals = block_vals.reshape(
+                        (block_vals.shape[0] * n_components, block_vals.shape[2])
+                    )
+                else:
+                    assert self._selection_type == "sample"
+                    # Move components into features
+                    block_vals = block.values.reshape(
+                        (block_vals.shape[0], block_vals.shape[2] * n_components)
+                    )
+
+            # Fit on the block values
+            selector.fit(block_vals, warm_start=warm_start)
+
+            # Build the support TensorMap. In this case we want the mask to be a
+            # list of bools, such that the original order of the metadata is
+            # preserved.
+            supp_mask = selector.get_support()
             if self._selection_type == "feature":
-                samples = Labels.single()
-                properties = Labels(
-                    names=block.properties.names, values=block.properties.values[mask]
+                supp_samples = Labels.single()
+                supp_properties = Labels(
+                    names=block.properties.names,
+                    values=block.properties.values[supp_mask],
                 )
             elif self._selection_type == "sample":
-                samples = Labels(
-                    names=block.samples.names, values=block.samples.values[mask]
+                supp_samples = Labels(
+                    names=block.samples.names, values=block.samples.values[supp_mask]
                 )
-                properties = Labels.single()
+                supp_properties = Labels.single()
 
-            blocks.append(
+            supp_vals = np.zeros(
+                [len(supp_samples), len(supp_properties)], dtype=np.int32
+            )
+            support_blocks.append(
                 TensorBlock(
-                    values=np.zeros([len(samples), len(properties)], dtype=np.int32),
-                    samples=samples,
+                    values=supp_vals,
+                    samples=supp_samples,
                     components=[],
-                    properties=properties,
+                    properties=supp_properties,
                 )
             )
 
-        self._support = TensorMap(X.keys, blocks)
+            if self._selector_class == skmatter._selection._FPS:
+                # Build the Hausdorff TensorMap. In this case we want the mask to be a
+                # list of int such that the smaples/properties are reordered
+                # according to the Hausdorff distance.
+                haus_mask = selector.get_support(indices=True, ordered=True)
+                if self._selection_type == "feature":
+                    haus_samples = Labels.single()
+                    haus_properties = Labels(
+                        names=block.properties.names,
+                        values=block.properties.values[haus_mask],
+                    )
+                elif self._selection_type == "sample":
+                    haus_samples = Labels(
+                        names=block.samples.names,
+                        values=block.samples.values[haus_mask],
+                    )
+                    haus_properties = Labels.single()
+
+                haus_vals = selector.hausdorff_at_select_[haus_mask].reshape(
+                    len(haus_samples), len(haus_properties)
+                )
+                hausdorff_blocks.append(
+                    TensorBlock(
+                        values=haus_vals,
+                        samples=haus_samples,
+                        components=[],
+                        properties=haus_properties,
+                    )
+                )
+
+        self._support = TensorMap(X.keys, support_blocks)
+        if self._selector_class == skmatter._selection._FPS:
+            self._select_distance = TensorMap(X.keys, hausdorff_blocks)
 
         return self
 
