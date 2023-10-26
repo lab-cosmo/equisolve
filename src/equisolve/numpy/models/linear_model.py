@@ -51,7 +51,7 @@ class _Ridge(_Estimator):
             X, y, check=["samples", "components"]
         ):
             raise ValueError(
-                "Metadata (samples, components) of X and y does not agree!"
+                "Metadata (samples, components, gradients) of X and y does not agree!"
             )
 
     def _validate_params(
@@ -69,7 +69,8 @@ class _Ridge(_Estimator):
         """
         if not metatensor.equal_metadata(X, alpha, check=["components", "properties"]):
             raise ValueError(
-                "Metadata (components, properties) of X and alpha does not agree!"
+                "Metadata (components, properties, gradients) of X and alpha does "
+                "not agree!"
             )
 
         if sample_weight is not None and not metatensor.equal_metadata(
@@ -81,7 +82,8 @@ class _Ridge(_Estimator):
             ],
         ):
             raise ValueError(
-                "Metadata (samples, components) of X and sample_weight does not agree!"
+                "Metadata (samples, components, gradients) of X and sample_weight "
+                "does not agree!"
             )
 
         for key, alpha_block in alpha.items():
