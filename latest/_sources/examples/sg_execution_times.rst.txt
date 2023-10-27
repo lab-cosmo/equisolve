@@ -1,0 +1,13 @@
+
+:orphan:
+
+.. _sphx_glr_examples_sg_execution_times:
+
+
+Computation times
+=================
+**00:03.455** total execution time for **examples** files:
+
++----------------------------------------------------------------+-----------+--------+
+| :ref:`sphx_glr_examples_linear-model.py` (``linear-model.py``) | 00:03.455 | 0.0 MB |
++----------------------------------------------------------------+-----------+--------+
