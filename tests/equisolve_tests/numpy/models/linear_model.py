@@ -11,7 +11,9 @@ import pytest
 from metatensor import Labels, TensorBlock, TensorMap
 from numpy.testing import assert_allclose, assert_equal
 
+from equisolve import HAS_METATENSOR_TORCH
 from equisolve.numpy.models import Ridge
+from equisolve.numpy.utils import core_tensor_map_to_torch
 
 from ..utilities import tensor_to_tensormap
 
@@ -78,6 +80,32 @@ class TestRidge:
         clf = Ridge()
         clf.fit(X=X, y=y, alpha=alpha, sample_weight=sw, solver=solver)
         return clf
+
+    @pytest.mark.skipif(
+        not (HAS_METATENSOR_TORCH), reason="requires metatensor-torch to be run"
+    )
+    def test_export_torch_module(self):
+        """Test if ridge is working and all shapes are converted correctly.
+        Test is performed for two blocks.
+        """
+
+        num_targets = 50
+        num_properties = 5
+
+        # Create input values
+        X_arr = self.rng.random([2, num_targets, num_properties])
+        y_arr = self.rng.random([2, num_targets, 1])
+
+        X = tensor_to_tensormap(X_arr)
+        y = tensor_to_tensormap(y_arr)
+
+        clf = Ridge()
+        clf.fit(X=X, y=y)
+        y_pred_torch = core_tensor_map_to_torch(clf.predict(X))
+
+        module = clf.export_torch_module()
+        y_pred_torch_module = module.forward(core_tensor_map_to_torch(X))
+        metatensor.torch.allclose_raise(y_pred_torch, y_pred_torch_module)
 
     num_properties = np.array([91])
     num_targets = np.array([1000])

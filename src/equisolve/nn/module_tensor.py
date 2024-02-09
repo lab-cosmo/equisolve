@@ -1,14 +1,13 @@
-try:
-    from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
+from .. import HAS_METATENSOR_TORCH
 
-    HAS_METATENSOR_TORCH = True
-except ImportError:
+
+if HAS_METATENSOR_TORCH:
+    from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
+else:
     from metatensor import Labels, LabelsEntry, TensorBlock, TensorMap
 
-    HAS_METATENSOR_TORCH = False
-
 from copy import deepcopy
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import torch
 from torch.nn import Module, ModuleDict
@@ -168,15 +167,28 @@ class Linear(ModuleTensorMap):
         properties, the labels of the properties cannot be persevered.
 
     :param bias:
-        See :py:class:`torch.nn.Linear`
+        See :py:class:`torch.nn.Linear` for bool as input. For each TensorMap key the
+        bias can be also individually tuend by using a TensorMap with one value for the
+        bool.
     """
 
     def __init__(
         self,
         in_tensor: TensorMap,
         out_tensor: TensorMap,
-        bias: bool = True,
+        bias: Union[bool, TensorMap] = True,
     ):
+        if isinstance(bias, bool):
+            blocks = [
+                TensorBlock(
+                    values=torch.tensor(bias).reshape(1, 1),
+                    samples=Labels.range("_", 1),
+                    components=[],
+                    properties=Labels.range("_", 1),
+                )
+                for _ in in_tensor.keys
+            ]
+            bias = TensorMap(keys=in_tensor.keys, blocks=blocks)
         module_map = ModuleDict()
         for key, in_block in in_tensor.items():
             module_key = ModuleTensorMap.module_key(key)
@@ -184,7 +196,7 @@ class Linear(ModuleTensorMap):
             module = torch.nn.Linear(
                 len(in_block.properties),
                 len(out_block.properties),
-                bias,
+                bias.block(key).values.flatten()[0],
                 in_block.values.device,
                 in_block.values.dtype,
             )
@@ -229,6 +241,34 @@ class Linear(ModuleTensorMap):
         """
         module = torch.nn.Linear(in_features, out_features, bias, device, dtype)
         return ModuleTensorMap.from_module(in_keys, module, many_to_one, out_tensor)
+
+    @classmethod
+    def from_weights(cls, weights: TensorMap, bias: Optional[TensorMap] = None):
+        """
+        :param weights:
+            The weight tensor map from which we create the linear modules.  The
+            properties of the tensor map describe the input dimension and the samples
+            describe the output dimension.
+
+        :param bias:
+            The weight tensor map from which we create the linear layers.
+        """
+        module_map = ModuleDict()
+        for key, weights_block in weights.items():
+            module_key = ModuleTensorMap.module_key(key)
+            module = torch.nn.Linear(
+                len(weights_block.samples),
+                len(weights_block.properties),
+                bias=False,
+                device=weights_block.values.device,
+                dtype=weights_block.values.dtype,
+            )
+            module.weight = torch.nn.Parameter(weights_block.values.T)
+            if bias is not None:
+                module.bias = torch.nn.Parameter(bias.block(key).values)
+            module_map[module_key] = module
+
+        return ModuleTensorMap(module_map, weights)
 
     def forward(self, tensor: TensorMap) -> TensorMap:
         # added to appear in doc, :inherited-members: is not compatible with torch

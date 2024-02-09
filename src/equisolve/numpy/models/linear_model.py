@@ -13,13 +13,12 @@ import numpy as np
 import scipy.linalg
 from metatensor import Labels, TensorBlock, TensorMap
 
-from ... import HAS_TORCH
-from ...module import NumpyModule, _Estimator
+from ...module import _Estimator
 from ...utils.metrics import rmse
-from ..utils import array_from_block, dict_to_tensor_map, tensor_map_to_dict
+from ..utils import array_from_block, core_tensor_map_to_torch, transpose_tensor_map
 
 
-class _Ridge(_Estimator):
+class Ridge(_Estimator):
     r"""Linear least squares with l2 regularization for :class:`metatensor.Tensormap`'s.
 
     Weights :math:`w` are calculated according to
@@ -345,8 +344,7 @@ class _Ridge(_Estimator):
 
             weights_blocks.append(weight_block)
 
-        # convert weights to a dictionary allowing pickle dump of an instance
-        self._weights = tensor_map_to_dict(TensorMap(X.keys, weights_blocks))
+        self._weights = TensorMap(X.keys, weights_blocks)
 
         return self
 
@@ -357,7 +355,7 @@ class _Ridge(_Estimator):
         if self._weights is None:
             raise ValueError("No weights. Call fit method first.")
 
-        return dict_to_tensor_map(self._weights)
+        return self._weights
 
     def predict(self, X: TensorMap) -> TensorMap:
         """
@@ -391,21 +389,31 @@ class _Ridge(_Estimator):
         y_pred = self.predict(X)
         return rmse(y, y_pred, parameter_key)
 
+    def export_torch_module(self, device=None, dtype=None):
+        """
+        Export existing weights to a child class :py:class:`torch.nn.Module` so it can
+        :py:mod:`torch.jit` utils can be applied.
 
-class NumpyRidge(_Ridge, NumpyModule):
-    def __init__(self) -> None:
-        NumpyModule.__init__(self)
-        _Ridge.__init__(self)
+        :param device:
+            :py:class:`torch.device` of values in the resulting module
 
+        :param dtye:
+            :py:class:`torch.dtype` of the values in the resulting module
 
-if HAS_TORCH:
-    import torch
+        :returns linear:
+            a :py:class:`equisolve.nn.Linear`
+        """
+        from ... import HAS_METATENSOR_TORCH
 
-    class TorchRidge(_Ridge, torch.nn.Module):
-        def __init__(self) -> None:
-            torch.nn.Module.__init__(self)
-            _Ridge.__init__(self)
+        if not HAS_METATENSOR_TORCH:
+            raise ImportError(
+                "To export your model to TorchScript torch needs to be installed. "
+                "Please install torch, then reimport equisolve or "
+                "use equisolve.refresh_global_flags()."
+            )
+        from ...nn import Linear
 
-    Ridge = TorchRidge
-else:
-    Ridge = NumpyRidge
+        torch_weights = core_tensor_map_to_torch(
+            transpose_tensor_map(self.weights), device, dtype
+        )
+        return Linear.from_weights(torch_weights)

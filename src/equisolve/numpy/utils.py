@@ -11,7 +11,7 @@ import tempfile
 
 import metatensor
 import numpy as np
-from metatensor import TensorBlock, TensorMap
+from metatensor import Labels, TensorBlock, TensorMap
 
 
 def array_from_block(block: TensorBlock) -> np.ndarray:
@@ -76,3 +76,89 @@ def dict_to_tensor_map(tensor_map_dict: dict):
     tmp_filename = tempfile.mktemp() + ".npz"
     np.savez(tmp_filename, **tensor_map_dict)
     return metatensor.load(tmp_filename)
+
+
+def core_tensor_map_to_torch(core_tensor: TensorMap, device=None, dtype=None):
+    """Transforms a tensor map from metatensor-core to metatensor-torch
+
+    :param core_tensor:
+        tensor map from metatensor-core
+
+    :param device:
+        :py:class:`torch.device` of values in the resulting tensor map
+
+    :param dtye:
+        :py:class:`torch.dtype` of values in the resulting tensor map
+
+    :returns torch_tensor:
+        tensor map from metatensor-torch
+    """
+    from metatensor.torch import TensorMap as TorchTensorMap
+
+    torch_blocks = []
+    for _, core_block in core_tensor.items():
+        torch_blocks.append(core_tensor_block_to_torch(core_block, device, dtype))
+    torch_keys = core_labels_to_torch(core_tensor.keys)
+    return TorchTensorMap(torch_keys, torch_blocks)
+
+
+def core_tensor_block_to_torch(core_block: TensorBlock, device=None, dtype=None):
+    """Transforms a tensor block from metatensor-core to metatensor-torch
+
+    :param core_block:
+        tensor block from metatensor-core
+
+    :param device:
+        :py:class:`torch.device` of values in the resulting block and labels
+
+    :param dtye:
+        :py:class:`torch.dtype` of values in the resulting block and labels
+
+    :returns torch_block:
+        tensor block from metatensor-torch
+    """
+    import torch
+    from metatensor.torch import TensorBlock as TorchTensorBlock
+
+    return TorchTensorBlock(
+        values=torch.tensor(core_block.values, device=device, dtype=dtype),
+        samples=core_labels_to_torch(core_block.samples, device=device),
+        components=[
+            core_labels_to_torch(component, device=device)
+            for component in core_block.components
+        ],
+        properties=core_labels_to_torch(core_block.properties, device=device),
+    )
+
+
+def core_labels_to_torch(core_labels: Labels, device=None):
+    """Transforms labels from metatensor-core to metatensor-torch
+
+    :param core_block:
+        tensor block from metatensor-core
+
+    :param device:
+        :py:class:`torch.device` of values in the resulting labels
+
+    :returns torch_block:
+        labels from metatensor-torch
+    """
+    import torch
+    from metatensor.torch import Labels as TorchLabels
+
+    return TorchLabels(
+        core_labels.names, torch.tensor(core_labels.values, device=device)
+    )
+
+
+def transpose_tensor_map(tensor: TensorMap):
+    blocks = []
+    for block in tensor.blocks():
+        block = TensorBlock(
+            values=block.values.T,
+            samples=block.properties,
+            components=block.components,
+            properties=block.samples,
+        )
+        blocks.append(block)
+    return TensorMap(tensor.keys, blocks)

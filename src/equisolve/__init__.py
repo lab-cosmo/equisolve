@@ -9,11 +9,32 @@
 __version__ = "0.0.0-dev"
 __authors__ = "the equisolve development team"
 
-# For a global consistent state of the package, we try to load here torch,
-# since torch is an optional dependency
-try:
-    import torch  # noqa: F401
 
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
+def refresh_global_flags():
+    """
+    Refreshes all global flags set on import of library. This function might be useful
+    if one is in an interactive session and installed some of the optional dependenicies
+    (torch, metatensor-torch) after importing the library.
+    """
+    global HAS_TORCH
+    global HAS_METATENSOR_TORCH
+
+    try:
+        import torch  # noqa: F401
+
+        HAS_TORCH = True
+    except ImportError:
+        HAS_TORCH = False
+
+    try:
+        from metatensor.torch import Labels, TensorBlock, TensorMap  # noqa: F401
+
+        HAS_METATENSOR_TORCH = True
+    except ImportError:
+        from metatensor import Labels, TensorBlock, TensorMap  # noqa: F401
+
+        HAS_METATENSOR_TORCH = False
+
+
+# For a global consistent state of the package, we set the global flags once here
+refresh_global_flags()

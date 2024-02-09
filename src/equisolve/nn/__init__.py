@@ -1,9 +1,5 @@
-try:
-    import torch  # noqa: F401
+from .. import HAS_TORCH
 
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
 
 if HAS_TORCH:
     from .module_tensor import Linear, ModuleTensorMap  # noqa: F401
